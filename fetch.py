@@ -42,4 +42,4 @@ if __name__ == "__main__":
 
         print(cert_obj.subject)
         print(cert_obj.issuer)
-        print(cert_obj.version)
+        # print(cert_obj.version)
