@@ -1,3 +1,7 @@
+SSH KEY:
+eval "$(ssh-agent -s)"
+ssh-add ~/.ssh/thesis_rsa
+
 Relevant calls for certificate information:
 
 
