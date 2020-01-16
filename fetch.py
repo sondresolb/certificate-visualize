@@ -39,7 +39,3 @@ if __name__ == "__main__":
 
     for cert in cert_list:
         cert_obj = cert_repr(cert)
-
-        print(cert_obj.subject)
-        print(cert_obj.issuer)
-        # print(cert_obj.version)
