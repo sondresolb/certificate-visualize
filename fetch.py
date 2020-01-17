@@ -7,14 +7,14 @@ from cert_repr import cert_repr
 
 
 if __name__ == "__main__":
-    host_string, port = 'www.theuselessweb.com', 443
+    host_string, port = 'www.fronter.com', 443
     cert_path = 'certificates'
 
     hostname = idna.encode(host_string)
     context = SSL.Context(SSL.SSLv23_METHOD)
     context.verify_mode = SSL.VERIFY_NONE
 
-    print(f'Connecting to {hostname} to get certificate...')
+    print(f'Connecting to {host_string} to get certificate...')
     cert_list = []
 
     try:
@@ -39,3 +39,4 @@ if __name__ == "__main__":
 
     for cert in cert_list:
         cert_obj = cert_repr(cert)
+        print(cert_obj.subject)

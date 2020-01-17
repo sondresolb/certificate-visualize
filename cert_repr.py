@@ -12,7 +12,6 @@ class cert_repr:
     def __init__(self, cert_obj):
         self.py_cert = cert_obj
         self.crypto_cert = None
-
         self.subject = None
         self.issuer = None
         self.version = None
@@ -22,7 +21,6 @@ class cert_repr:
         self.has_expired = None
         self.validity_period = None
         self.public_key = None
-
         self.initilize_cert()
 
     def initilize_cert(self):
@@ -36,7 +34,7 @@ class cert_repr:
         self.has_expired = self.set_has_expired()
         self.validity_period = self.set_validity_period()
         self.public_key = self.set_public_key()
-        print(self.public_key)
+        # print(self.public_key)
 
     # Distinguished Name from x.509.Name object as a dict
     def set_dn(self, cert_name):
@@ -99,11 +97,20 @@ class cert_repr:
             pub_key["generator"] = param_numbers.g
 
         elif isinstance(key_obj, asymmetric.ec.EllipticCurvePublicKey):
-            print("EC")
+            pub_key["type"] = "EllipticCurve"
+            curve_obj = key_obj.public_numbers().curve
+            pub_key["size"] = curve_obj.key_size
+            pub_key["curve"] = curve_obj.name
+
         elif isinstance(key_obj, asymmetric.ed25519.Ed25519PublicKey):
-            print("ED2")
+            pub_key["type"] = "EdDSA25519"
+            pub_key["hash"] = "sha512"
+            pub_key["curve"] = "curve25519"
+
         elif isinstance(key_obj, asymmetric.ed448.Ed448PublicKey):
-            print("ED4")
+            pub_key["type"] = "EdDSA448"
+            pub_key["hash"] = "SHAKE256"
+            pub_key["curve"] = "curve448"
 
         return pub_key
 
