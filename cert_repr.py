@@ -21,6 +21,7 @@ class cert_repr:
         self.has_expired = None
         self.validity_period = None
         self.public_key = None
+        self.extensions = None
         self.initilize_cert()
 
     def initilize_cert(self):
@@ -34,6 +35,7 @@ class cert_repr:
         self.has_expired = self.set_has_expired()
         self.validity_period = self.set_validity_period()
         self.public_key = self.set_public_key()
+        self.extensions = self.set_extensions()
         # print(self.public_key)
 
     # Distinguished Name from x.509.Name object as a dict
@@ -52,8 +54,9 @@ class cert_repr:
         return self.crypto_cert.serial_number
 
     def set_extensions(self):
+        extensions = []
         for ext in self.crypto_cert.extensions:
-            print(ext)
+            print(ext.oid)
 
     def set_signature_algorithm(self):
         return self.crypto_cert.signature_algorithm_oid._name
@@ -113,17 +116,3 @@ class cert_repr:
             pub_key["curve"] = "curve448"
 
         return pub_key
-
-    def dump_certificates(self, host, cert_path, certs):
-        try:
-            for index, cert in enumerate(certs):
-                # DN possibly not unique in different regions
-                tmp_path = os.path.join(cert_path, host)
-                path = f"{tmp_path}_{index}.pem"
-
-                with open(path, 'w+') as out:
-                    out.write((crypto.dump_certificate
-                               (crypto.FILETYPE_PEM, cert).decode('utf-8')))
-
-        except IOError:
-            print(f'Exception:  {IOError.strerror}')
