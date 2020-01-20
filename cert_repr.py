@@ -2,10 +2,9 @@ from OpenSSL import crypto
 
 from cryptography import x509
 from cryptography.x509.oid import ExtensionOID
-from cryptography.x509 import ExtensionNotFound
 from cryptography.x509 import InvalidVersion
 
-from cryptography.hazmat.primitives import asymmetric
+from cryptography.hazmat.primitives import asymmetric, hashes
 
 
 # Decorator for creating safe function reference
@@ -29,6 +28,7 @@ class cert_repr:
         self.validity_period = None
         self.public_key = None
         self.extensions = None
+        self.fingerprint = None
         self.initilize_cert()
 
     def initilize_cert(self):
@@ -43,7 +43,7 @@ class cert_repr:
         self.validity_period = self.set_validity_period()
         self.public_key = self.set_public_key()
         self.extensions = self.set_extensions()
-        # print(self.public_key)
+        self.fingerprint = self.set_fingerprint()
 
     # Distinguished Name from x.509.Name object as a dict
     def set_dn(self, cert_name):
@@ -119,19 +119,30 @@ class cert_repr:
 
         return pub_key
 
+    def set_fingerprint(self):
+        return f"SHA256: {self.crypto_cert.fingerprint(hashes.SHA256()).hex()}"
+
     def set_extensions(self):
         extensions = []
 
-        for ext in self.crypto_cert.extensions:
-            try:
-                fn = getattr(self, ext.oid._name)
-                extensions.append(fn(ext))
+        try:
+            for ext in self.crypto_cert.extensions:
+                try:
+                    fn = getattr(self, ext.oid._name)
+                    extensions.append(fn(ext))
 
-            except AttributeError:
-                if isinstance(ext, x509.UnrecognizedExtension):
-                    extensions.append(self.unrecognizedExtension(ext))
-                else:
-                    print(f"Unknown extension: {ext.oid._name}")
+                except AttributeError:
+                    if isinstance(ext, x509.UnrecognizedExtension):
+                        extensions.append(self.unrecognizedExtension(ext))
+                    else:
+                        print(f"Failed to parse extension: {ext.oid._name}")
+
+        except x509.DuplicateExtension as dup:
+            print(str(dup))
+        except x509.UnsupportedGeneralNameType as unsupp:
+            print(str(unsupp))
+        except UnicodeError as uni:
+            print(str(uni))
 
         return extensions
 
@@ -144,11 +155,32 @@ class cert_repr:
         the certificate. The usage restriction might be employed when a key 
         that could be used for more than one operation is to be restricted.
         """
-        extension_obj = {}
-        extension_obj["name"] = ext.oid._name
-        extension_obj["doc"] = self.get_documentation(me)
+        ext_obj = {}
+        ext_obj["name"] = ext.oid._name
+        ext_obj["critical"] = ext.critical
+        ext_obj["doc"] = self.get_documentation(me)
+        ext_obj["value"] = []
 
-        return extension_obj
+        val = ext.value
+        ext_obj["value"].append(
+            "content_commitment") if val.content_commitment else None
+        ext_obj["value"].append(
+            "data_encipherment") if val.data_encipherment else None
+        ext_obj["value"].append(
+            "digital_signature") if val.digital_signature else None
+        ext_obj["value"].append(
+            "key_encipherment") if val.key_encipherment else None
+        ext_obj["value"].append("crl_sign") if val.crl_sign else None
+        ext_obj["value"].append("key_cert_sign") if val.key_cert_sign else None
+        ext_obj["value"].append("key_agreement") if val.key_agreement else None
+
+        if val.key_agreement:
+            ext_obj["value"].append(
+                "encipher_only") if val.encipher_only else None
+            ext_obj["value"].append(
+                "decipher_only") if val.decipher_only else None
+
+        return ext_obj
 
     @func_ref
     def basicConstraints(me, self, ext):
@@ -159,7 +191,10 @@ class cert_repr:
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
+        extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
+        extension_obj["value"] = {"CA": ext.value.ca,
+                                  "path_length": ext.value.path_length}
 
         return extension_obj
 
@@ -172,10 +207,13 @@ class cert_repr:
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
+        extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
+        extension_obj["value"] = [oid._name for oid in ext.value]
 
         return extension_obj
 
+    # This function must be tested
     @func_ref
     def TLSFeature(me, self, ext):
         """
@@ -184,7 +222,13 @@ class cert_repr:
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
+        extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
+        extension_obj["must_staple"] = False
+
+        for item in ext.value:
+            if item.name == "status_request":
+                extension_obj["must_staple"] = True
 
         return extension_obj
 
@@ -197,6 +241,7 @@ class cert_repr:
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
+        extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
 
         return extension_obj
@@ -211,6 +256,7 @@ class cert_repr:
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
+        extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
 
         return extension_obj
@@ -223,6 +269,7 @@ class cert_repr:
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
+        extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
 
         return extension_obj
@@ -236,6 +283,7 @@ class cert_repr:
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
+        extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
 
         return extension_obj
@@ -249,6 +297,7 @@ class cert_repr:
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
+        extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
 
         return extension_obj
@@ -263,6 +312,7 @@ class cert_repr:
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
+        extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
 
         return extension_obj
@@ -278,6 +328,7 @@ class cert_repr:
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
+        extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
 
         return extension_obj
@@ -292,6 +343,7 @@ class cert_repr:
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
+        extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
 
         return extension_obj
@@ -306,6 +358,7 @@ class cert_repr:
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
+        extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
 
         return extension_obj
@@ -318,6 +371,7 @@ class cert_repr:
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
+        extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
 
         return extension_obj
@@ -330,6 +384,7 @@ class cert_repr:
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
+        extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
 
         return extension_obj
@@ -348,6 +403,7 @@ class cert_repr:
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
+        extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
 
         return extension_obj
@@ -362,6 +418,7 @@ class cert_repr:
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
+        extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
 
         return extension_obj
@@ -374,6 +431,7 @@ class cert_repr:
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
+        extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
 
         return extension_obj
@@ -386,7 +444,9 @@ class cert_repr:
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
+        extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
+        extension_obj["value"] = ext.value
 
         return extension_obj
 

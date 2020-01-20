@@ -7,10 +7,12 @@ from cert_repr import cert_repr
 
 
 if __name__ == "__main__":
-    host_string, port = 'www.digicert.com', 443
+    host_string, port = 'www.scotthelme.co.uk', 443
     cert_path = 'certificates'
 
     hostname = idna.encode(host_string)
+
+    # SSL.TLSv1_2_METHOD, SSL.SSLv23_METHOD
     context = SSL.Context(SSL.SSLv23_METHOD)
     context.verify_mode = SSL.VERIFY_NONE
 
@@ -39,7 +41,7 @@ if __name__ == "__main__":
 
     for cert in cert_list:
         cert_obj = cert_repr(cert)
-        for extension in cert_obj.extensions:
-            print(f"{extension['name']}:\n{extension['doc']}\n")
+        print(cert_obj.public_key)
+        print(cert_obj.fingerprint)
 
-        # break
+        break
