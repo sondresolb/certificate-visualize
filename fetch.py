@@ -8,7 +8,6 @@ from cert_repr import cert_repr
 
 if __name__ == "__main__":
     host_string, port = 'www.fronter.com', 443
-    cert_path = 'certificates'
 
     hostname = idna.encode(host_string)
 
@@ -41,4 +40,19 @@ if __name__ == "__main__":
 
     for cert in cert_list:
         cert_obj = cert_repr(cert)
-        print(cert_obj)
+
+        print(f"\nSubject: {cert_obj.subject}\n")
+        print(f"Issuer: {cert_obj.issuer}\n")
+        print(f"Version: {cert_obj.version}\n")
+        print(f"Serial number: {cert_obj.serial_number}\n")
+        print(f"Signature algo: {cert_obj.signature_algorithm}\n")
+        print(f"Signature hash: {cert_obj.signature_hash}\n")
+        print(f"Expired: {cert_obj.has_expired}\n")
+        print(f"Validity period: {cert_obj.validity_period}\n")
+        print(f"Public key: {cert_obj.public_key}\n")
+        print(f"Fingerprint: {cert_obj.fingerprint}\n")
+        print("Extensions: ")
+        for ext in cert_obj.extensions:
+            print(
+                f"Name: {ext['name']}, Critical: {ext['critical']}, OID: {ext['OID']}")
+            print(f"{ext['value']}\n")

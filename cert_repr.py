@@ -451,6 +451,8 @@ class cert_repr:
             if item.reasons:
                 crl_dist["reasons"] = [reason.name for reason in item.reasons]
 
+            extension_obj["value"].append(crl_dist)
+
         return extension_obj
 
     @func_ref
