@@ -7,7 +7,7 @@ from cert_repr import cert_repr
 
 
 if __name__ == "__main__":
-    host_string, port = 'www.scotthelme.co.uk', 443
+    host_string, port = 'www.fronter.com', 443
     cert_path = 'certificates'
 
     hostname = idna.encode(host_string)
@@ -41,7 +41,4 @@ if __name__ == "__main__":
 
     for cert in cert_list:
         cert_obj = cert_repr(cert)
-        print(cert_obj.public_key)
-        print(cert_obj.fingerprint)
-
-        break
+        print(cert_obj)

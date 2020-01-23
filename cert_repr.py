@@ -143,6 +143,8 @@ class cert_repr:
             print(str(unsupp))
         except UnicodeError as uni:
             print(str(uni))
+        except Exception as e:
+            print(str(e))
 
         return extensions
 
@@ -151,14 +153,15 @@ class cert_repr:
     @func_ref
     def keyUsage(me, self, ext):
         """
-        The key usage extension defines the purpose of the key contained in 
-        the certificate. The usage restriction might be employed when a key 
+        The key usage extension defines the purpose of the key contained in
+        the certificate. The usage restriction might be employed when a key
         that could be used for more than one operation is to be restricted.
         """
         ext_obj = {}
         ext_obj["name"] = ext.oid._name
         ext_obj["critical"] = ext.critical
         ext_obj["doc"] = self.get_documentation(me)
+        ext_obj["OID"] = ext.oid.dotted_string
         ext_obj["value"] = []
 
         val = ext.value
@@ -185,14 +188,15 @@ class cert_repr:
     @func_ref
     def basicConstraints(me, self, ext):
         """
-        Basic constraints is an X.509 extension type that defines whether a 
-        given certificate is allowed to sign additional certificates and what 
+        Basic constraints is an X.509 extension type that defines whether a
+        given certificate is allowed to sign additional certificates and what
         path length restrictions may exist.
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
         extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
+        extension_obj["OID"] = ext.oid.dotted_string
         extension_obj["value"] = {"CA": ext.value.ca,
                                   "path_length": ext.value.path_length}
 
@@ -201,225 +205,295 @@ class cert_repr:
     @func_ref
     def extendedKeyUsage(me, self, ext):
         """
-        This extension indicates one or more purposes for which the certified 
-        public key may be used, in addition to or in place of the basic 
+        This extension indicates one or more purposes for which the certified
+        public key may be used, in addition to or in place of the basic
         purposes indicated in the key usage extension.
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
         extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
+        extension_obj["OID"] = ext.oid.dotted_string
         extension_obj["value"] = [oid._name for oid in ext.value]
 
         return extension_obj
 
-    # This function must be tested
+    # MUST BE TESTED
     @func_ref
     def TLSFeature(me, self, ext):
         """
-        The TLS Feature extension is defined in RFC 7633 and is used in 
+        The TLS Feature extension is defined in RFC 7633 and is used in
         certificates for OCSP Must-Staple.
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
         extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
-        extension_obj["must_staple"] = False
+        extension_obj["OID"] = ext.oid.dotted_string
+        extension_obj["value"] = {"must_staple": False}
 
         for item in ext.value:
             if item.name == "status_request":
-                extension_obj["must_staple"] = True
+                extension_obj["value"]["must_staple"] = True
 
         return extension_obj
 
+    # MUST BE TESTED
     @func_ref
     def nameConstraints(me, self, ext):
         """
-        The name constraints extension, which only has meaning in a CA 
-        certificate, defines a name space within which all subject names in 
+        The name constraints extension, which only has meaning in a CA
+        certificate, defines a name space within which all subject names in
         certificates issued beneath the CA certificate must (or must not) be in.
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
         extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
+        extension_obj["OID"] = ext.oid.dotted_string
+        extension_obj["value"] = {}
+
+        extension_obj["value"]["permitted_subtrees"] = ext.permitted_subtrees
+        extension_obj["value"]["excluded_subtrees"] = ext.excluded_subtrees
 
         return extension_obj
 
     @func_ref
     def authorityKeyIdentifier(me, self, ext):
         """
-        The authority key identifier extension provides a means of identifying 
-        the public key corresponding to the private key used to sign a certificate. 
-        This extension is typically used to assist in determining the appropriate 
+        The authority key identifier extension provides a means of identifying
+        the public key corresponding to the private key used to sign this certificate.
+        This extension is also typically used to assist in determining the appropriate
         certificate chain.
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
         extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
+        extension_obj["OID"] = ext.oid.dotted_string
+        extension_obj["value"] = ext.value.key_identifier.hex()
 
         return extension_obj
 
     @func_ref
     def subjectKeyIdentifier(me, self, ext):
         """
-        The subject key identifier extension provides a means of identifying 
-        certificates that contain a particular public key.
+        The subject key identifier extension provides a means of uniquely
+        identifying the public key contained in this certificate.
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
         extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
+        extension_obj["OID"] = ext.oid.dotted_string
+        extension_obj["value"] = ext.value.digest.hex()
 
         return extension_obj
 
     @func_ref
     def subjectAltName(me, self, ext):
         """
-        Subject alternative name is an X.509 extension that provides a list 
-        of general name instances that provide a set of identities for which 
-        the certificate is valid.
+        Subject alternative name is an X.509 extension that provides a set
+        of identities for which the certificate is valid.
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
         extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
+        extension_obj["OID"] = ext.oid.dotted_string
+        extension_obj["value"] = ext.value.get_values_for_type(x509.DNSName)
 
         return extension_obj
 
     @func_ref
     def issuerAltName(me, self, ext):
         """
-        Issuer alternative name is an X.509 extension that provides a list 
-        of general name instances that provide a set of identities for the 
-        certificate issuer.
+        Issuer alternative name is an X.509 extension that provides a set
+        of identities for the certificate issuer.
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
         extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
+        extension_obj["OID"] = ext.oid.dotted_string
+        extension_obj["value"] = ext.value.get_values_for_type(x509.DNSName)
 
         return extension_obj
 
     @func_ref
     def signedCertificateTimestampList(me, self, ext):
         """
-        This extension contains Signed Certificate Timestamps which were 
-        issued for the pre-certificate corresponding to this certificate. 
-        These can be used to verify that the certificate is included in a 
+        This extension contains Signed Certificate Timestamps which were
+        issued for the pre-certificate corresponding to this certificate.
+        These can be used to verify that the certificate is included in a
         public Certificate Transparency log.
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
         extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
+        extension_obj["OID"] = ext.oid.dotted_string
+        extension_obj["value"] = []
+
+        for item in ext.value:
+            sct = {}
+            sct["version"] = item.version.name
+            sct["log_id"] = item.log_id.hex()
+            sct["timestamp"] = item.timestamp.ctime()
+            sct["entry_type"] = item.entry_type.name
+            extension_obj["value"].append(sct)
 
         return extension_obj
 
     @func_ref
     def ctPoison(me, self, ext):
         """
-        This extension indicates that the certificate should not be treated 
-        as a certificate for the purposes of validation, but is instead for 
-        submission to a certificate transparency log in order to obtain SCTs 
-        which will be embedded in a Precertificate SCTs extension on the 
+        This extension indicates that the certificate should not be treated
+        as a certificate for the purposes of validation, but is instead for
+        submission to a certificate transparency log in order to obtain SCTs
+        which will be embedded in a Precertificate SCTs extension on the
         final certificate.
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
         extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
+        extension_obj["OID"] = ext.oid.dotted_string
 
         return extension_obj
 
+    # seems to only exist as a CRL extension
     @func_ref
     def deltaCRLIndicator(me, self, ext):
         """
-        The delta CRL indicator is a CRL extension that identifies a CRL as 
-        being a delta CRL. Delta CRLs contain updates to revocation information 
-        previously distributed, rather than all the information that would appear 
+        The delta CRL indicator is a CRL extension that identifies a CRL as
+        being a delta CRL. Delta CRLs contain updates to revocation information
+        previously distributed, rather than all the information that would appear
         in a complete CRL.
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
         extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
+        extension_obj["OID"] = ext.oid.dotted_string
+        extension_obj["value"] = {"crl_number": ext.value.crl_number}
 
         return extension_obj
 
     @func_ref
     def authorityInfoAccess(me, self, ext):
         """
-        The authority information access extension indicates how to access 
-        information and services for the issuer of the certificate in which 
-        the extension appears. Information and services may include online 
+        The authority information access extension indicates how to access
+        information and services for the issuer of the certificate in which
+        the extension appears. Information and services may include online
         validation services (such as OCSP) and issuer data.
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
         extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
+        extension_obj["OID"] = ext.oid.dotted_string
+        extension_obj["value"] = []
+
+        for item in ext.value:
+            auth_info = {}
+            # Either OCSP or CA_ISSUERS
+            auth_info["access_method"] = item.access_method._name
+            auth_info["access_location"] = item.access_location.value
+            extension_obj["value"].append(auth_info)
 
         return extension_obj
 
+    # seems to only exist as a CRL extension
     @func_ref
     def freshestCRL(me, self, ext):
         """
-        The freshest CRL extension (also known as Delta CRL Distribution Point) 
+        The freshest CRL extension (also known as Delta CRL Distribution Point)
         identifies how delta CRL information is obtained
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
         extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
+        extension_obj["OID"] = ext.oid.dotted_string
+        extension_obj["value"] = []
+
+        for item in ext.value:
+            pass
 
         return extension_obj
 
     @func_ref
     def cRLDistributionPoints(me, self, ext):
         """
-        The CRL distribution points extension identifies how CRL information 
+        The CRL distribution points extension identifies how CRL information
         is obtained.
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
         extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
+        extension_obj["OID"] = ext.oid.dotted_string
+        extension_obj["value"] = []
+
+        for item in ext.value:
+            crl_dist = {}
+
+            if item.full_name:
+                crl_dist["full_name"] = [fn.value for fn in item.full_name]
+
+            if item.relative_name:
+                crl_dist["relative_name"] = item.relative_name.rfc4514_string()
+
+            if item.crl_issuer:
+                crl_dist["crl_issuer"] = [ci.value for ci in item.crl_issuer]
+
+            if item.reasons:
+                crl_dist["reasons"] = [reason.name for reason in item.reasons]
 
         return extension_obj
 
     @func_ref
     def inhibitAnyPolicy(me, self, ext):
         """
-        The inhibit anyPolicy extension indicates that the special OID ANY_POLICY, 
-        is not considered an explicit match for other CertificatePolicies except 
-        when it appears in an intermediate self-issued CA certificate. The value 
-        indicates the number of additional non-self-issued certificates that may 
-        appear in the path before ANY_POLICY is no longer permitted. For example, 
-        a value of one indicates that ANY_POLICY may be processed in certificates 
-        issued by the subject of this certificate, but not in additional 
+        The inhibit anyPolicy extension indicates that the special OID ANY_POLICY,
+        is not considered an explicit match for other CertificatePolicies except
+        when it appears in an intermediate self-issued CA certificate. The value
+        indicates the number of additional non-self-issued certificates that may
+        appear in the path before ANY_POLICY is no longer permitted. For example,
+        a value of one indicates that ANY_POLICY may be processed in certificates
+        issued by the subject of this certificate, but not in additional
         certificates in the path.
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
         extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
+        extension_obj["OID"] = ext.oid.dotted_string
+        extension_obj["value"] = {"skip_certs": ext.value.skip_certs}
 
         return extension_obj
 
     @func_ref
     def policyConstraints(me, self, ext):
         """
-        The policy constraints extension is used to inhibit policy mapping or 
-        require that each certificate in a chain contain an acceptable policy 
-        identifier. For more information about the use of this extension see 
+        The policy constraints extension is used to inhibit policy mapping or
+        require that each certificate in a chain contain an acceptable policy
+        identifier. For more information about the use of this extension see
         RFC 5280.
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
         extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
+        extension_obj["OID"] = ext.oid.dotted_string
+        extension_obj["value"] = None
+
+        constraints = {}
+
+        constraints["require_explicit_policy"] = ext.value.require_explicit_policy
+        constraints["inhibit_policy_mapping"] = ext.value.inhibit_policy_mapping
+        extension_obj["value"] = constraints
 
         return extension_obj
 
@@ -433,19 +507,26 @@ class cert_repr:
         extension_obj["name"] = ext.oid._name
         extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
+        extension_obj["OID"] = ext.oid.dotted_string
+        extension_obj["value"] = []
+
+        for policy in ext.value:
+            extension_obj["value"].append(
+                policy.policy_identifier.dotted_string)
 
         return extension_obj
 
     @func_ref
     def unrecognizedExtension(me, self, ext):
         """
-        Generic extension holding the raw value of an extension that 
+        Generic extension holding the raw value of an extension that
         the underlying cryptography library does not know how to parse.
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
         extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
+        extension_obj["OID"] = ext.oid.dotted_string
         extension_obj["value"] = ext.value
 
         return extension_obj
