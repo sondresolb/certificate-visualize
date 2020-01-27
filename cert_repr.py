@@ -123,13 +123,13 @@ class cert_repr:
         return f"SHA256: {self.crypto_cert.fingerprint(hashes.SHA256()).hex()}"
 
     def set_extensions(self):
-        extensions = []
+        extensions = {}
 
         try:
             for ext in self.crypto_cert.extensions:
                 try:
                     fn = getattr(self, ext.oid._name)
-                    extensions.append(fn(ext))
+                    extensions[ext.oid._name] = fn(ext)
 
                 except AttributeError:
                     if isinstance(ext, x509.UnrecognizedExtension):

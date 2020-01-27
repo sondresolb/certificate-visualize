@@ -10,6 +10,7 @@ pyOpenSSL = "*"
 autopep8 = "*"
 cryptography = "*"
 idna = "*"
+requests = "*"
 
 [requires]
 python_version = "3.7"
