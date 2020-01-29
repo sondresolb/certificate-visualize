@@ -16,13 +16,13 @@ from urllib.parse import urlsplit
 
 
 def main():
-    # (NOTICE) Certificates not always in order
     cert_list = []
 
     for cert in fetch_certificate_chain("www.google.com"):
         cert_list.append(cert_repr(cert))
 
-    r = check_ocsp_status(cert_list[0], cert_list[1])
+    for res in get_ocsp_response(cert_list[0], cert_list[1]):
+        print(res)
 
 
 def fetch_certificate_chain(domain):
@@ -55,14 +55,16 @@ def fetch_certificate_chain(domain):
     return certificates
 
 
-def check_ocsp_status(cert, issuer):
+def get_ocsp_response(cert, issuer):
+    ocsp_responses = []
     ocsp_endpoints = []
 
-    for info in cert.extensions["authorityInfoAccess"]["value"]:
-        if "OCSP" in info["access_method"]:
-            ocsp_endpoint = info["access_location"]
-            host = urlsplit(ocsp_endpoint).netloc
-            ocsp_endpoints.append((host, ocsp_endpoint))
+    if cert.extensions.get("authorityInfoAccess", None):
+        for info in cert.extensions["authorityInfoAccess"]["value"]:
+            if "OCSP" in info["access_method"]:
+                ocsp_endpoint = info["access_location"]
+                host = urlsplit(ocsp_endpoint).netloc
+                ocsp_endpoints.append((host, ocsp_endpoint))
 
     # OCSP not supported
     if not ocsp_endpoints:
@@ -76,21 +78,27 @@ def check_ocsp_status(cert, issuer):
     req_encoded = req.public_bytes(serialization.Encoding.DER)
 
     for endpoint in ocsp_endpoints:
+        endpoint_res = {}
         headers = {'Host': endpoint[0],
                    'Content-Type': 'application/ocsp-request'}
 
         response = requests.post(
             endpoint[1], data=req_encoded, headers=headers)
 
-        print(f"Request status: {response.status_code}")
-
         ocsp_response = ocsp.load_der_ocsp_response(response.content)
-        response_status = ocsp_response.response_status
-        certificate_status = ocsp_response.certificate_status
-        print(f"response_status: {response_status}")
-        print(f"certificate_status: {certificate_status}")
+        endpoint_res["endpoint"] = endpoint[1]
+        endpoint_res["response_status"] = ocsp_response.response_status.name
+        endpoint_res["certificate_status"] = ocsp_response.certificate_status.name
+        endpoint_res["signature_algorithm"] = ocsp_response.signature_algorithm_oid._name
+        endpoint_res["produced_at"] = ocsp_response.produced_at
+        endpoint_res["this_update"] = ocsp_response.this_update
+        endpoint_res["next_update"] = ocsp_response.next_update
+        # None if request was successful
+        endpoint_res["revocation_time"] = ocsp_response.revocation_time
+        endpoint_res["revocation_reason"] = ocsp_response.revocation_reason
+        ocsp_responses.append(endpoint_res)
 
-    return None
+    return ocsp_responses
 
 
 def rep_cert(cert_obj):
@@ -113,60 +121,3 @@ def rep_cert(cert_obj):
 
 if __name__ == "__main__":
     main()
-    # host_string, port = 'www.fronter.com', 443
-
-    # hostname = idna.encode(host_string)
-
-    # # SSL.TLSv1_2_METHOD, SSL.SSLv23_METHOD
-    # context = SSL.Context(SSL.SSLv23_METHOD)
-    # context.verify_mode = SSL.VERIFY_NONE
-
-    # print(f'Connecting to {host_string} to get certificate...')
-    # cert_list = []
-
-    # try:
-    #     s = socket()
-    #     conn = SSL.Connection(context, s)
-    #     conn.set_connect_state()
-    #     # Server name indicator support (SNI)
-    #     conn.set_tlsext_host_name(hostname)
-
-    #     conn.connect((hostname, port))
-    #     conn.do_handshake()
-    #     # print(conn.get_protocol_version_name())
-    #     # print(conn.get_servername.get_components())
-    #     cert_list = conn.get_peer_cert_chain()
-
-    # except Exception as e:
-    #     print(f"Exception: {e}")
-    #     exit()
-    # finally:
-    #     s.close()
-    #     conn.close()
-
-    # obj_list = []
-    # for cert in cert_list:
-    #     obj_list.append(cert_repr(cert))
-
-    # for info in obj_list[0].extensions["authorityInfoAccess"]["value"]:
-    #     if "OCSP" in info["access_method"]:
-    #         ocsp_endpoint = info["access_location"]
-    #         host = urlsplit(ocsp_endpoint).netloc
-
-    # builder = ocsp.OCSPRequestBuilder()
-    # builder = builder.add_certificate(
-    #     obj_list[0].crypto_cert, obj_list[1].crypto_cert, SHA1())
-    # req = builder.build()
-    # req_encoded = req.public_bytes(serialization.Encoding.DER)
-
-    # headers = {'Host': host,
-    #            'Content-Type': 'application/ocsp-request'}
-
-    # response = requests.post(
-    #     ocsp_endpoint, data=req_encoded, headers=headers)
-
-    # print(response.status_code)
-
-    # ocsp_response = ocsp.load_der_ocsp_response(response.content)
-    # status = ocsp_response.response_status
-    # print(status)
