@@ -11,6 +11,9 @@ autopep8 = "*"
 cryptography = "*"
 idna = "*"
 requests = "*"
+certvalidator = "*"
+certifi = "*"
+pem = "*"
 
 [requires]
 python_version = "3.7"

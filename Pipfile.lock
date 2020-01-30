@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "0884d8fafd0818f52c5cfab53627e63fed8bb1c0f1b1720dfd79b5ecae4d8261"
+            "sha256": "25ed0fdb90b55f02dbb870db4ba33b190bc024331d44034075994d281fe97513"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -17,6 +17,13 @@
     },
     "default": {},
     "develop": {
+        "asn1crypto": {
+            "hashes": [
+                "sha256:5a215cb8dc12f892244e3a113fe05397ee23c5c4ca7a69cd6e69811755efc42d",
+                "sha256:831d2710d3274c8a74befdddaf9f17fcbf6e350534565074818722d6d615b315"
+            ],
+            "version": "==1.3.0"
+        },
         "autopep8": {
             "hashes": [
                 "sha256:0f592a0447acea0c2b0a9602be1e4e3d86db52badd2e3c84f0193bfd89fd3a43"
@@ -29,7 +36,16 @@
                 "sha256:017c25db2a153ce562900032d5bc68e9f191e44e9a0f762f373977de9df1fbb3",
                 "sha256:25b64c7da4cd7479594d035c08c2d809eb4aab3a26e5a990ea98cc450c320f1f"
             ],
+            "index": "pypi",
             "version": "==2019.11.28"
+        },
+        "certvalidator": {
+            "hashes": [
+                "sha256:77520b269f516d4fb0902998d5bd0eb3727fe153b659aa1cb828dcf12ea6b8de",
+                "sha256:922d141c94393ab285ca34338e18dd4093e3ae330b1f278e96c837cb62cffaad"
+            ],
+            "index": "pypi",
+            "version": "==0.11.1"
         },
         "cffi": {
             "hashes": [
@@ -110,6 +126,21 @@
             ],
             "index": "pypi",
             "version": "==2.8"
+        },
+        "oscrypto": {
+            "hashes": [
+                "sha256:2f53f50813ecc5114fd126b89766fabdb9448e0bb080814451cc4bb92acafca4",
+                "sha256:e9ea9401294b20ee17225502cc308660814ba8de386f94bc9b1dcf518d5399d9"
+            ],
+            "version": "==1.2.0"
+        },
+        "pem": {
+            "hashes": [
+                "sha256:2763631a5ffe55f1f21fa34abafdba174a8eeb670d84f66dcfd7a523b44608f6",
+                "sha256:aa72dbe04ec2b38435d30b5b233a8be9cb3761947385a622533ba0abd9c21507"
+            ],
+            "index": "pypi",
+            "version": "==20.1.0"
         },
         "pycodestyle": {
             "hashes": [
