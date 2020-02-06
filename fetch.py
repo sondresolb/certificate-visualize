@@ -73,6 +73,21 @@ def fetch_certificate_chain(domain):
 
 
 def validate_certificate_chain(domain, cert_chain, whitelist=None):
+    """Validates the certificate path given a certificate chain
+
+    Validates the certificate path, checks that the certificate is valid for the
+    hostname provided and that the certificate is valid for the purpose of a TLS connection
+
+    Args:
+        domain (str): The host address
+        cert_chain (list): List of cert_repr objects
+        whitelist (list): List of hex encoded SHA-1 certificate fingerprint strings
+
+    Returns:
+        tuple(bool, ValidationPath):
+            bool: If the validation was successful
+            ValidationPath: Iterable of certificate objects representing the path
+    """
     try:
         der_certs = [cert.crypto_cert.public_bytes(
             serialization.Encoding.DER) for cert in cert_chain]
@@ -83,8 +98,6 @@ def validate_certificate_chain(domain, cert_chain, whitelist=None):
         cert_validator = CertificateValidator(
             end_entity_cert=der_certs[0], intermediate_certs=der_certs[1:], validation_context=valid_context)
 
-        # Validates the certificate path, that the certificate is valid for
-        # the hostname provided and that the certificate is valid for the purpose of a TLS connection
         result = cert_validator.validate_tls(domain)
 
         # for res in result:
@@ -156,43 +169,31 @@ def check_ocsp(cert, issuer):
     req = build_ocsp_request(cert, issuer)
 
     for endpoint in ocsp_endpoints:
-        endpoint_res = {}
+        host, ocsp_endpoint = endpoint[0], endpoint[1]
+
+        endpoint_res = {"endpoint": ocsp_endpoint}
 
         try:
-            ocsp_response = get_ocsp_response(endpoint, req)
+            ocsp_response = get_ocsp_response(host, ocsp_endpoint, req)
         except c_ex.OCSPRequestResponseError as orre:
-            endpoint_res["endpoint"] = endpoint[1]
             endpoint_res["no_response"] = f"Failed to fetch OCSP response: {str(orre)}"
             ocsp_responses.append(endpoint_res)
             continue
 
         # Validate responder certificate (move into response validation)
-        endpoint_res["responder_result"] = validate_ocsp_responder(endpoint[0])
+        endpoint_res["responder_result"] = validate_ocsp_responder(host)
         print(f"Responder valid: {endpoint_res['responder_result']['valid']}")
 
-        # VALIDATING RESPONSE ------------>
-        tbs_bytes = ocsp_response.tbs_response_bytes
-        response_signature = ocsp_response.signature
-        sig_hash_algo = ocsp_response.signature_hash_algorithm
-        responder_key = issuer.crypto_cert.public_key()
-
-        # Valid padding types for RSA -->
-        # res_padding = padding.PSS(mgf=padding.MGF1(
-        #     SHA256()), salt_length=padding.PSS.MAX_LENGTH)
-        res_padding = padding.PKCS1v15()
-
-        try:
-            responder_key.verify(response_signature, tbs_bytes,
-                                 res_padding, sig_hash_algo)
-
-        except InvalidSignature as ivs:
-            print("OCSP response is valid: False")
+        # Validate ocsp response signature
+        if validate_ocsp_response(ocsp_response, issuer.crypto_cert.public_key()):
+            endpoint_res["valid_signature"] = True
+            print("OCSP response signature is valid")
         else:
-            print("OCSP response is valid: True")
+            endpoint_res["valid_signature"] = False
+            ocsp_responses.append(endpoint_res)
+            print("OCSP response invalid signature")
+            continue
 
-        # VALIDATING RESPONSE <------------
-
-        endpoint_res["endpoint"] = endpoint[1]
         endpoint_res["response_status"] = ocsp_response.response_status.name
         print(endpoint_res["response_status"])
 
@@ -221,13 +222,13 @@ def check_ocsp(cert, issuer):
     return (True, ocsp_responses)
 
 
-def get_ocsp_response(endpoint, req_encoded):
-    headers = {'Host': endpoint[0],
+def get_ocsp_response(host, ocsp_endpoint, req_encoded):
+    headers = {'Host': host,
                'Content-Type': 'application/ocsp-request'}
 
     try:
         response = requests.post(
-            endpoint[1], data=req_encoded, headers=headers)
+            ocsp_endpoint, data=req_encoded, headers=headers)
 
         response.raise_for_status()
         return x509.ocsp.load_der_ocsp_response(response.content)
@@ -241,7 +242,29 @@ def get_ocsp_response(endpoint, req_encoded):
             'Unhandled exception occured while requesting ocsp response') from e
 
 
-def validate_ocsp_responder(endpoint):
+def validate_ocsp_response(ocsp_response, issuer_key):
+    tbs_bytes = ocsp_response.tbs_response_bytes
+    response_signature = ocsp_response.signature
+    sig_hash_algo = ocsp_response.signature_hash_algorithm
+    responder_key = issuer_key
+
+    # Valid padding types for RSA -->
+    # res_padding = padding.PSS(mgf=padding.MGF1(
+    #     SHA256()), salt_length=padding.PSS.MAX_LENGTH)
+    res_padding = padding.PKCS1v15()
+
+    try:
+        responder_key.verify(response_signature, tbs_bytes,
+                             res_padding, sig_hash_algo)
+
+    except InvalidSignature as ivs:
+        return False
+
+    # raise c_ex.OCSPInvalidSignature('') from ivs
+    return True
+
+
+def validate_ocsp_responder(host):
     """Validate OCSP responder certificate chain
 
     Takes in an OCSP endpoint found in the AuthorityInfoAccess
@@ -251,7 +274,7 @@ def validate_ocsp_responder(endpoint):
     fails, content will contain the failure message
 
     Args:
-        endpoint (str): Host address of ocsp responder
+        host (str): Host address of ocsp responder
 
     Returns:
         result (dict): {
@@ -260,13 +283,13 @@ def validate_ocsp_responder(endpoint):
         }
     """
     responder_certs = [cert_repr(c)
-                       for c in fetch_certificate_chain(endpoint)]
+                       for c in fetch_certificate_chain(host)]
 
     # Avoiding TLS hostname matching of end-certificate
     whitelist = [responder_certs[0].fingerprint["SHA1"]]
 
     validation_result = validate_certificate_chain(
-        endpoint, responder_certs, whitelist)
+        host, responder_certs, whitelist)
 
     valid = validation_result[0]
     result = {

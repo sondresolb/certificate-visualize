@@ -4,3 +4,7 @@ class OCSPRequestBuildError(Exception):
 
 class OCSPRequestResponseError(Exception):
     pass
+
+
+class OCSPInvalidSignature(Exception):
+    pass
