@@ -120,7 +120,11 @@ class cert_repr:
         return pub_key
 
     def set_fingerprint(self):
-        return f"SHA256: {self.crypto_cert.fingerprint(hashes.SHA256()).hex()}"
+        fingerprint = {}
+        fingerprint["SHA1"] = self.crypto_cert.fingerprint(hashes.SHA1()).hex()
+        fingerprint["SHA256"] = self.crypto_cert.fingerprint(hashes.SHA256()).hex()
+
+        return fingerprint
 
     def set_extensions(self):
         extensions = {}
