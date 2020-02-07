@@ -2,12 +2,14 @@ import idna
 import requests
 from socket import socket
 from OpenSSL import SSL
+from OpenSSL.crypto import x509 as py_x509
 from cert_repr import cert_repr
 from requests.exceptions import HTTPError
 
-from cryptography import x509
+from cryptography import x509 as cryptography_x509
 from cryptography.hazmat.primitives.hashes import SHA1, SHA256
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives import asymmetric
 from urllib.parse import urlsplit
 
 from cryptography.hazmat.backends import default_backend
@@ -21,6 +23,9 @@ from cryptography.exceptions import InvalidSignature
 
 import cert_visualize_exceptions as c_ex
 
+# stress test
+import json
+
 
 TRUST_STORE = None
 
@@ -29,17 +34,34 @@ def main():
     global TRUST_STORE
     TRUST_STORE = get_trust_store()
 
-    domain = "www.google.com"
-    cert_chain = [cert_repr(cert) for cert in fetch_certificate_chain(domain)]
-    validate_certificate_chain(domain, cert_chain)
+    # Stress test
+    uni_domains = []
+    with open("uni_domains.json") as json_file:
+        uni_json = json.load(json_file)
+        for item in uni_json:
+            uni_domains.extend([urlsplit(i).netloc for i in item["web_pages"]])
 
-    end_cert, issuer_cert = cert_chain[0], cert_chain[1]
+    for domain in uni_domains:
+        # domain = "king.edu"
+        cert_chain = [cert_repr(cert)
+                        for cert in fetch_certificate_chain(domain)]
 
-    try:
-        ocsp_responses = check_ocsp(end_cert, issuer_cert)
+        if len(cert_chain) <= 1:
+            continue
 
-    except c_ex.OCSPRequestBuildError as orbe:
-        print(str(orbe))
+        validation_res = validate_certificate_chain(
+            domain, [c.crypto_cert for c in cert_chain])
+        if not validation_res[0]:
+            print(
+                f"Certificate chain provided by {domain} could not be validated!")
+
+        end_cert, issuer_cert = cert_chain[0], cert_chain[1]
+
+        try:
+            ocsp_responses = check_ocsp(end_cert, issuer_cert)
+
+        except c_ex.OCSPRequestBuildError as orbe:
+            print(str(orbe))
 
 
 def fetch_certificate_chain(domain):
@@ -63,8 +85,8 @@ def fetch_certificate_chain(domain):
         certificates = conn.get_peer_cert_chain()
 
     except Exception as e:
-        print(f"Exception: {e}")
-        exit()
+        print(f"Unable to fetch certificate chain for {domain}: {e}")
+        # exit()
     finally:
         s.close()
         conn.close()
@@ -80,7 +102,7 @@ def validate_certificate_chain(domain, cert_chain, whitelist=None):
 
     Args:
         domain (str): The host address
-        cert_chain (list): List of cert_repr objects
+        cert_chain (list): List of cryptography.x509.Certificate
         whitelist (list): List of hex encoded SHA-1 certificate fingerprint strings
 
     Returns:
@@ -89,7 +111,7 @@ def validate_certificate_chain(domain, cert_chain, whitelist=None):
             ValidationPath: Iterable of certificate objects representing the path
     """
     try:
-        der_certs = [cert.crypto_cert.public_bytes(
+        der_certs = [cert.public_bytes(
             serialization.Encoding.DER) for cert in cert_chain]
 
         valid_context = ValidationContext(
@@ -107,7 +129,7 @@ def validate_certificate_chain(domain, cert_chain, whitelist=None):
 
     except cert_errors.PathBuildingError as pbe:
         print(f"{type(pbe)}: {str(pbe)}")
-        ex = "Unable to find the necessary root certificate to build the validation path"
+        ex = "Unable to find the necessary certificates to build the validation path"
         return (False, ex, str(pbe))
     except cert_errors.PathValidationError as pve:
         print(f"{type(pve)}: {str(pve)}")
@@ -128,11 +150,12 @@ def check_ocsp(cert, issuer):
 
     Takes in a <cert> to be checked and the <issuer> of <cert>.
     <cert> is checked for OCSP endpoints, then included as an
-    argument to the OCSPRequest builder, together with <issuer>.
+    argument to the OCSPRequest builder together with <issuer>.
     The last argument to OCSPRequest builder is the hash function
     used to hash specific fields in the request (eg. issuerNameHash, issuerKeyHash).
-    The request is encoded to ASN.1 and sent together with a header to 
-    indicate the content type as an OCSP request.
+    The request is encoded to DER/ASN.1 and sent together with a header to 
+    indicate the content type as an OCSP request. If the request was successful,
+    the OCSP response is verified and relevant information is extracted.
 
     The OCSP response can be signed by:
         1.  The issuer of the certificate beeing checked
@@ -141,8 +164,8 @@ def check_ocsp(cert, issuer):
         (https://www.ibm.com/support/knowledgecenter/SSFKSJ_9.1.0/com.ibm.mq.explorer.doc/e_auth_info_ocsp.htm)
 
     Args:
-        cert (cryptography.x509.Certificate): The one beeing checked
-        issuer (cryptography.x509.Certificate): The issuer of <cert>
+        cert (cert_repr): The certificate beeing checked
+        issuer (cert_repr): The issuer of <cert>
 
     Returns:
         tuple(bool, list): 
@@ -156,6 +179,7 @@ def check_ocsp(cert, issuer):
     ocsp_responses = []
     ocsp_endpoints = []
 
+    # Check AIA extension for OCSP enpoints
     if cert.extensions.get("authorityInfoAccess", None):
         for info in cert.extensions["authorityInfoAccess"]["value"]:
             if "OCSP" in info["access_method"]:
@@ -180,24 +204,24 @@ def check_ocsp(cert, issuer):
             ocsp_responses.append(endpoint_res)
             continue
 
-        # Validate responder certificate (move into response validation)
-        endpoint_res["responder_result"] = validate_ocsp_responder(host)
-        print(f"Responder valid: {endpoint_res['responder_result']['valid']}")
-
-        # Validate ocsp response signature
-        if validate_ocsp_response(ocsp_response, issuer.crypto_cert.public_key()):
-            endpoint_res["valid_signature"] = True
-            print("OCSP response signature is valid")
-        else:
-            endpoint_res["valid_signature"] = False
-            ocsp_responses.append(endpoint_res)
-            print("OCSP response invalid signature")
-            continue
-
         endpoint_res["response_status"] = ocsp_response.response_status.name
-        print(endpoint_res["response_status"])
+        print(f"OCSP Response status: {endpoint_res['response_status']}")
 
         if endpoint_res["response_status"] == 'SUCCESSFUL':
+
+            # Verify ocsp response signature
+            endpoint_res["verification_result"] = validate_ocsp_response(
+                host, ocsp_response, issuer)
+
+            print(
+                f"OCSP Certificate status: {ocsp_response.certificate_status.name}")
+            if endpoint_res["verification_result"]["valid"]:
+                print("OCSP Signature: VALID")
+            else:
+                print("OCSP Signature: INVALID")
+            print(
+                f"OCSP Signing extension: {endpoint_res['verification_result']['sig_ext']}\n")
+
             endpoint_res["certificate_status"] = ocsp_response.certificate_status.name
             endpoint_res["certificate_status_msg"] = get_res_message(
                 endpoint_res["certificate_status"])
@@ -231,7 +255,7 @@ def get_ocsp_response(host, ocsp_endpoint, req_encoded):
             ocsp_endpoint, data=req_encoded, headers=headers)
 
         response.raise_for_status()
-        return x509.ocsp.load_der_ocsp_response(response.content)
+        return cryptography_x509.ocsp.load_der_ocsp_response(response.content)
 
     except HTTPError as http_err:
         raise c_ext.OCSPRequestResponseError(
@@ -242,67 +266,96 @@ def get_ocsp_response(host, ocsp_endpoint, req_encoded):
             'Unhandled exception occured while requesting ocsp response') from e
 
 
-def validate_ocsp_response(ocsp_response, issuer_key):
+def validate_ocsp_response(host, ocsp_response, issuer):
     tbs_bytes = ocsp_response.tbs_response_bytes
-    response_signature = ocsp_response.signature
+    signature_bytes = ocsp_response.signature
     sig_hash_algo = ocsp_response.signature_hash_algorithm
-    responder_key = issuer_key
+    issuer_cert = issuer.crypto_cert
+    key_certs = [issuer_cert]
 
-    # Valid padding types for RSA -->
-    # res_padding = padding.PSS(mgf=padding.MGF1(
-    #     SHA256()), salt_length=padding.PSS.MAX_LENGTH)
-    res_padding = padding.PKCS1v15()
+    # Check for certificate chain passed with response
+    if ocsp_response.certificates:
+        delegate_end = ocsp_response.certificates[0]
 
+        # Try validating delegate signature with issuer key
+        verifi_res = signature_verification([issuer_cert], delegate_end.signature,
+                                            delegate_end.tbs_certificate_bytes,
+                                            delegate_end.signature_hash_algorithm)
+        if verifi_res[0]:
+            key_certs.append(delegate_end)
+            print("OCSP: Issuer signed response")
+
+        else:
+            # Try validating certificate chain of unknown delegate
+            delegate_validation_res = validate_certificate_chain(
+                host, ocsp_response.certificates)
+
+            if delegate_validation_res[0]:
+                key_certs.append(delegate_end)
+                print("OCSP: Unknown signed response")
+
+    valid, cert = signature_verification(
+        key_certs, signature_bytes, tbs_bytes, sig_hash_algo)
+
+    validation_result = {"valid": valid,
+                         "validation_cert": cert, "sig_ext": False}
+
+    # Checking if certificate contains the OCSPSigning extension
+    if cert is not None:
+        policy_oid = cryptography_x509.oid.ExtensionOID.CERTIFICATE_POLICIES
+        try:
+            policy_ext = cert.extensions.get_extension_for_oid(policy_oid).value
+        except cryptography_x509.extensions.ExtensionNotFound:
+            return validation_result
+
+        if any(policy.policy_identifier.dotted_string in
+               ("1.3.6.1.5.5.7.3.9", "2.5.29.32.0") for policy in policy_ext):
+            validation_result["sig_ext"] = True
+
+    return validation_result
+
+
+def signature_verification(key_certs, signature_bytes, tbs_bytes, sig_hash_algo):
+    # Try validating signature for each available key
+    for pub_cert in key_certs:
+        if isinstance(pub_cert.public_key(), asymmetric.rsa.RSAPublicKey):
+            pss_padding = padding.PSS(mgf=padding.MGF1(
+                SHA256()), salt_length=padding.PSS.MAX_LENGTH)
+
+            for pad in (padding.PKCS1v15(), pss_padding):
+                if verify_signature(pub_cert.public_key(), signature_bytes,
+                                    tbs_bytes, pad, sig_hash_algo):
+                    return (True, pub_cert)
+
+        elif isinstance(pub_cert.public_key(), asymmetric.ec.EllipticCurvePublicKey):
+            if verify_signature(pub_cert.public_key(), signature_bytes,
+                                tbs_bytes, asymmetric.ec.ECDSA(sig_hash_algo)):
+                return (True, pub_cert)
+
+        elif isinstance(pub_cert.public_key(), asymmetric.dsa.DSAPublicKey):
+            if verify_signature(pub_cert.public_key(), signature_bytes,
+                                tbs_bytes, sig_hash_algo):
+                return (True, pub_cert)
+        else:
+            if verify_signature(pub_cert.public_key(), signature_bytes, tbs_bytes):
+                return (True, pub_cert)
+    else:
+        return (False, None)
+
+
+def verify_signature(pub_key, *verify_args):
     try:
-        responder_key.verify(response_signature, tbs_bytes,
-                             res_padding, sig_hash_algo)
+        pub_key.verify(*verify_args)
 
     except InvalidSignature as ivs:
         return False
 
-    # raise c_ex.OCSPInvalidSignature('') from ivs
     return True
-
-
-def validate_ocsp_responder(host):
-    """Validate OCSP responder certificate chain
-
-    Takes in an OCSP endpoint found in the AuthorityInfoAccess
-    certificate extension and fetches the certificate chain
-    of the responder. The chain is validated and returns a
-    dictionary describing the validation result. If validation
-    fails, content will contain the failure message
-
-    Args:
-        host (str): Host address of ocsp responder
-
-    Returns:
-        result (dict): {
-            valid (bool): If validation was successful
-            content (ValidationPath): Iterable object of certificate path
-        }
-    """
-    responder_certs = [cert_repr(c)
-                       for c in fetch_certificate_chain(host)]
-
-    # Avoiding TLS hostname matching of end-certificate
-    whitelist = [responder_certs[0].fingerprint["SHA1"]]
-
-    validation_result = validate_certificate_chain(
-        host, responder_certs, whitelist)
-
-    valid = validation_result[0]
-    result = {
-        "valid": valid,
-        "content": validation_result[1] if valid else validation_result[1]
-    }
-
-    return result
 
 
 def build_ocsp_request(cert, issuer):
     try:
-        builder = x509.ocsp.OCSPRequestBuilder()
+        builder = cryptography_x509.ocsp.OCSPRequestBuilder()
         builder = builder.add_certificate(
             cert.crypto_cert, issuer.crypto_cert, SHA1())
 
