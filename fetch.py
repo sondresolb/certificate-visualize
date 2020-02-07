@@ -42,9 +42,9 @@ def main():
             uni_domains.extend([urlsplit(i).netloc for i in item["web_pages"]])
 
     for domain in uni_domains:
-        # domain = "king.edu"
+        # domain = "www.live.com"
         cert_chain = [cert_repr(cert)
-                        for cert in fetch_certificate_chain(domain)]
+                      for cert in fetch_certificate_chain(domain)]
 
         if len(cert_chain) <= 1:
             continue
@@ -302,14 +302,15 @@ def validate_ocsp_response(host, ocsp_response, issuer):
 
     # Checking if certificate contains the OCSPSigning extension
     if cert is not None:
-        policy_oid = cryptography_x509.oid.ExtensionOID.CERTIFICATE_POLICIES
+        ext_keyusage_oid = cryptography_x509.oid.ExtensionOID.EXTENDED_KEY_USAGE
         try:
-            policy_ext = cert.extensions.get_extension_for_oid(policy_oid).value
+            extended_keyusage = cert.extensions.get_extension_for_oid(
+                ext_keyusage_oid).value
         except cryptography_x509.extensions.ExtensionNotFound:
             return validation_result
 
-        if any(policy.policy_identifier.dotted_string in
-               ("1.3.6.1.5.5.7.3.9", "2.5.29.32.0") for policy in policy_ext):
+        if any(keyusage.dotted_string == ("1.3.6.1.5.5.7.3.9")
+               for keyusage in extended_keyusage):
             validation_result["sig_ext"] = True
 
     return validation_result
