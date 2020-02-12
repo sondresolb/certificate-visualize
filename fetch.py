@@ -1,5 +1,6 @@
 import idna
 import requests
+import json
 from socket import socket
 from OpenSSL import SSL
 from OpenSSL.crypto import x509 as py_x509
@@ -23,9 +24,6 @@ from cryptography.exceptions import InvalidSignature
 
 import cert_visualize_exceptions as c_ex
 
-# stress test
-import json
-
 
 TRUST_STORE = None
 
@@ -35,11 +33,7 @@ def main():
     TRUST_STORE = get_trust_store()
 
     # Stress test
-    uni_domains = []
-    with open("uni_domains.json") as json_file:
-        uni_json = json.load(json_file)
-        for item in uni_json:
-            uni_domains.extend([urlsplit(i).netloc for i in item["web_pages"]])
+    uni_domains = get_stress_test()
 
     for domain in uni_domains:
         # domain = "www.live.com"
@@ -220,7 +214,7 @@ def check_ocsp(cert, issuer):
             else:
                 print("OCSP Signature: INVALID")
             print(
-                f"OCSP Signing extension: {endpoint_res['verification_result']['sig_ext']}\n")
+                f"OCSP Signature key can sign: {endpoint_res['verification_result']['can_sign']}\n")
 
             endpoint_res["certificate_status"] = ocsp_response.certificate_status.name
             endpoint_res["certificate_status_msg"] = get_res_message(
@@ -230,8 +224,6 @@ def check_ocsp(cert, issuer):
             endpoint_res["produced_at"] = ocsp_response.produced_at
             endpoint_res["this_update"] = ocsp_response.this_update
             endpoint_res["next_update"] = ocsp_response.next_update
-            endpoint_res["response_raw"] = ocsp_response.public_bytes(
-                serialization.Encoding.DER)
 
             if endpoint_res["certificate_status"] == 'REVOKED':
                 endpoint_res["revocation_time"] = ocsp_response.revocation_time
@@ -258,11 +250,11 @@ def get_ocsp_response(host, ocsp_endpoint, req_encoded):
         return cryptography_x509.ocsp.load_der_ocsp_response(response.content)
 
     except HTTPError as http_err:
-        raise c_ext.OCSPRequestResponseError(
+        raise c_ex.OCSPRequestResponseError(
             'HTTP error occurred while requesting ocsp response') from http_err
 
     except Exception as e:
-        raise c_ext.OCSPRequestResponseError(
+        raise c_ex.OCSPRequestResponseError(
             'Unhandled exception occured while requesting ocsp response') from e
 
 
@@ -283,7 +275,7 @@ def validate_ocsp_response(host, ocsp_response, issuer):
                                             delegate_end.signature_hash_algorithm)
         if verifi_res[0]:
             key_certs.append(delegate_end)
-            print("OCSP: Issuer signed response")
+            print("OCSP: Response signed by delegate and validated with issuer key")
 
         else:
             # Try validating certificate chain of unknown delegate
@@ -292,26 +284,30 @@ def validate_ocsp_response(host, ocsp_response, issuer):
 
             if delegate_validation_res[0]:
                 key_certs.append(delegate_end)
-                print("OCSP: Unknown signed response")
+                print("OCSP: Response signed by delegate and validated by external key")
 
     valid, cert = signature_verification(
         key_certs, signature_bytes, tbs_bytes, sig_hash_algo)
 
     validation_result = {"valid": valid,
-                         "validation_cert": cert, "sig_ext": False}
+                         "validation_cert": cert, "can_sign": False}
 
-    # Checking if certificate contains the OCSPSigning extension
-    if cert is not None:
-        ext_keyusage_oid = cryptography_x509.oid.ExtensionOID.EXTENDED_KEY_USAGE
-        try:
-            extended_keyusage = cert.extensions.get_extension_for_oid(
-                ext_keyusage_oid).value
-        except cryptography_x509.extensions.ExtensionNotFound:
-            return validation_result
+    if valid:
+        # OCSP signing delegation must be explicit with id-kp-OCSPSigning extension
+        if issuer.serial_number != cert.serial_number:
+            ext_keyusage_oid = cryptography_x509.oid.ExtensionOID.EXTENDED_KEY_USAGE
+            try:
+                extended_keyusage = cert.extensions.get_extension_for_oid(
+                    ext_keyusage_oid).value
+            except cryptography_x509.extensions.ExtensionNotFound:
+                return validation_result
 
-        if any(keyusage.dotted_string == ("1.3.6.1.5.5.7.3.9")
-               for keyusage in extended_keyusage):
-            validation_result["sig_ext"] = True
+            if any(keyusage.dotted_string == ("1.3.6.1.5.5.7.3.9")
+                   for keyusage in extended_keyusage):
+                validation_result["can_sign"] = True
+
+        else:
+            validation_result["can_sign"] = True
 
     return validation_result
 
@@ -415,6 +411,16 @@ def rep_cert(cert_obj):
         print(
             f"Name: {ext['name']}, Critical: {ext['critical']}, OID: {ext['OID']}")
         print(f"{ext['value']}\n")
+
+
+def get_stress_test():
+    uni_domains = []
+    with open("uni_domains.json") as json_file:
+        uni_json = json.load(json_file)
+        for item in uni_json:
+            uni_domains.extend([urlsplit(i).netloc for i in item["web_pages"]])
+
+    return uni_domains
 
 
 if __name__ == "__main__":

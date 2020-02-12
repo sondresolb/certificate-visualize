@@ -10,7 +10,7 @@ from cryptography.hazmat.primitives import asymmetric, hashes
 # Decorator for creating safe function reference
 def func_ref(func):
     def wrapper(*args, **kwargs):
-        return func(func, *args, **kwargs)
+        return func(*args, **kwargs, me=func)
     return wrapper
 
 
@@ -122,7 +122,8 @@ class cert_repr:
     def set_fingerprint(self):
         fingerprint = {}
         fingerprint["SHA1"] = self.crypto_cert.fingerprint(hashes.SHA1()).hex()
-        fingerprint["SHA256"] = self.crypto_cert.fingerprint(hashes.SHA256()).hex()
+        fingerprint["SHA256"] = self.crypto_cert.fingerprint(
+            hashes.SHA256()).hex()
 
         return fingerprint
 
@@ -155,7 +156,7 @@ class cert_repr:
     # x.509 Certificate extensions ---->
 
     @func_ref
-    def keyUsage(me, self, ext):
+    def keyUsage(self, ext, me):
         """
         The key usage extension defines the purpose of the key contained in
         the certificate. The usage restriction might be employed when a key
@@ -190,7 +191,7 @@ class cert_repr:
         return ext_obj
 
     @func_ref
-    def basicConstraints(me, self, ext):
+    def basicConstraints(self, ext, me):
         """
         Basic constraints is an X.509 extension type that defines whether a
         given certificate is allowed to sign additional certificates and what
@@ -207,7 +208,7 @@ class cert_repr:
         return extension_obj
 
     @func_ref
-    def extendedKeyUsage(me, self, ext):
+    def extendedKeyUsage(self, ext, me):
         """
         This extension indicates one or more purposes for which the certified
         public key may be used, in addition to or in place of the basic
@@ -224,7 +225,7 @@ class cert_repr:
 
     # MUST BE TESTED
     @func_ref
-    def TLSFeature(me, self, ext):
+    def TLSFeature(self, ext, me):
         """
         The TLS Feature extension is defined in RFC 7633 and is used in
         certificates for OCSP Must-Staple.
@@ -244,7 +245,7 @@ class cert_repr:
 
     # MUST BE TESTED
     @func_ref
-    def nameConstraints(me, self, ext):
+    def nameConstraints(self, ext, me):
         """
         The name constraints extension, which only has meaning in a CA
         certificate, defines a name space within which all subject names in
@@ -263,7 +264,7 @@ class cert_repr:
         return extension_obj
 
     @func_ref
-    def authorityKeyIdentifier(me, self, ext):
+    def authorityKeyIdentifier(self, ext, me):
         """
         The authority key identifier extension provides a means of identifying
         the public key corresponding to the private key used to sign this certificate.
@@ -280,7 +281,7 @@ class cert_repr:
         return extension_obj
 
     @func_ref
-    def subjectKeyIdentifier(me, self, ext):
+    def subjectKeyIdentifier(self, ext, me):
         """
         The subject key identifier extension provides a means of uniquely
         identifying the public key contained in this certificate.
@@ -295,7 +296,7 @@ class cert_repr:
         return extension_obj
 
     @func_ref
-    def subjectAltName(me, self, ext):
+    def subjectAltName(self, ext, me):
         """
         Subject alternative name is an X.509 extension that provides a set
         of identities for which the certificate is valid.
@@ -310,7 +311,7 @@ class cert_repr:
         return extension_obj
 
     @func_ref
-    def issuerAltName(me, self, ext):
+    def issuerAltName(self, ext, me):
         """
         Issuer alternative name is an X.509 extension that provides a set
         of identities for the certificate issuer.
@@ -325,7 +326,7 @@ class cert_repr:
         return extension_obj
 
     @func_ref
-    def signedCertificateTimestampList(me, self, ext):
+    def signedCertificateTimestampList(self, ext, me):
         """
         This extension contains Signed Certificate Timestamps which were
         issued for the pre-certificate corresponding to this certificate.
@@ -350,7 +351,7 @@ class cert_repr:
         return extension_obj
 
     @func_ref
-    def ctPoison(me, self, ext):
+    def ctPoison(self, ext, me):
         """
         This extension indicates that the certificate should not be treated
         as a certificate for the purposes of validation, but is instead for
@@ -368,7 +369,7 @@ class cert_repr:
 
     # seems to only exist as a CRL extension
     @func_ref
-    def deltaCRLIndicator(me, self, ext):
+    def deltaCRLIndicator(self, ext, me):
         """
         The delta CRL indicator is a CRL extension that identifies a CRL as
         being a delta CRL. Delta CRLs contain updates to revocation information
@@ -385,7 +386,7 @@ class cert_repr:
         return extension_obj
 
     @func_ref
-    def authorityInfoAccess(me, self, ext):
+    def authorityInfoAccess(self, ext, me):
         """
         The authority information access extension indicates how to access
         information and services for the issuer of the certificate in which
@@ -410,7 +411,7 @@ class cert_repr:
 
     # seems to only exist as a CRL extension
     @func_ref
-    def freshestCRL(me, self, ext):
+    def freshestCRL(self, ext, me):
         """
         The freshest CRL extension (also known as Delta CRL Distribution Point)
         identifies how delta CRL information is obtained
@@ -428,7 +429,7 @@ class cert_repr:
         return extension_obj
 
     @func_ref
-    def cRLDistributionPoints(me, self, ext):
+    def cRLDistributionPoints(self, ext, me):
         """
         The CRL distribution points extension identifies how CRL information
         is obtained.
@@ -460,7 +461,7 @@ class cert_repr:
         return extension_obj
 
     @func_ref
-    def inhibitAnyPolicy(me, self, ext):
+    def inhibitAnyPolicy(self, ext, me):
         """
         The inhibit anyPolicy extension indicates that the special OID ANY_POLICY,
         is not considered an explicit match for other CertificatePolicies except
@@ -481,7 +482,7 @@ class cert_repr:
         return extension_obj
 
     @func_ref
-    def policyConstraints(me, self, ext):
+    def policyConstraints(self, ext, me):
         """
         The policy constraints extension is used to inhibit policy mapping or
         require that each certificate in a chain contain an acceptable policy
@@ -504,7 +505,7 @@ class cert_repr:
         return extension_obj
 
     @func_ref
-    def certificatePolicies(me, self, ext):
+    def certificatePolicies(self, ext, me):
         """
         The certificate policies extension is a list containing one or
         more policies.
@@ -523,7 +524,7 @@ class cert_repr:
         return extension_obj
 
     @func_ref
-    def unrecognizedExtension(me, self, ext):
+    def unrecognizedExtension(self, ext, me):
         """
         Generic extension holding the raw value of an extension that
         the underlying cryptography library does not know how to parse.
