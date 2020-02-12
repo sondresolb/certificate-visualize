@@ -137,6 +137,5 @@ def verify_signature(pub_key, *verify_args):
 
 def set_trust_store():
     global TRUST_STORE
-
     pem_certs = pem.parse_file(certifi.where())
     TRUST_STORE = [pem_cert.as_bytes() for pem_cert in pem_certs]

@@ -14,7 +14,7 @@ def func_ref(func):
     return wrapper
 
 
-class cert_repr:
+class Cert_repr:
     def __init__(self, cert_obj):
         self.py_cert = cert_obj
         self.crypto_cert = None

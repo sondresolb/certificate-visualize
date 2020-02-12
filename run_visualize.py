@@ -1,15 +1,15 @@
-from cert_repr import cert_repr
 import visualize_tools as vis_tools
 import visualize_ocsp as vis_ocsp
+from visualize_certificate import Cert_repr
 from visualize_exceptions import OCSPRequestBuildError
 
 
 def main():
     vis_tools.set_trust_store()     # Set custom trust store for validation
-    # run_stress_test()               # Run a stress test
+    run_stress_test()               # Run a stress test
 
     domain = "tmall.com"
-    cert_chain = [cert_repr(cert)
+    cert_chain = [Cert_repr(cert)
                   for cert in vis_tools.fetch_certificate_chain(domain)]
 
     if len(cert_chain) <= 1:
@@ -65,7 +65,7 @@ def run_stress_test():
 
     for domain in uni_domains:
         # Certificate parsing
-        cert_chain = [cert_repr(cert)
+        cert_chain = [Cert_repr(cert)
                       for cert in vis_tools.fetch_certificate_chain(domain)]
 
         # Certificate chain validation
