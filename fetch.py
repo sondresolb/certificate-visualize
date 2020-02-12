@@ -22,7 +22,7 @@ import pem
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.exceptions import InvalidSignature
 
-import cert_visualize_exceptions as c_ex
+import visualize_exceptions as c_ex
 
 
 TRUST_STORE = None
