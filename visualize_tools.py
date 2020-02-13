@@ -1,8 +1,9 @@
 import idna
 import pem
+import requests
 import certifi
 from socket import socket
-from OpenSSL import SSL
+from OpenSSL import SSL, crypto
 
 from cryptography.hazmat.primitives.hashes import SHA256
 from cryptography.hazmat.primitives import asymmetric, serialization
@@ -11,6 +12,9 @@ from cryptography.exceptions import InvalidSignature
 
 from certvalidator import CertificateValidator, ValidationContext
 from certvalidator import errors as cert_errors
+from visualize_exceptions import CertificateFetchingError, NoCertificatesError
+from visualize_exceptions import IntermediateFetchingError
+from visualize_certificate import Cert_repr
 
 
 TRUST_STORE = None
@@ -36,14 +40,53 @@ def fetch_certificate_chain(domain):
         conn.do_handshake()
         certificates = conn.get_peer_cert_chain()
 
+        if len(certificates) == 0:
+            raise NoCertificatesError(
+                f"No certificates found for domain: {domain}")
+
+        cert_chain = [Cert_repr(cert) for cert in certificates]
+
+        if len(cert_chain) == 1:
+            inter_cert = fetch_intermediate_cert(cert_chain[0])
+            cert_chain.append(inter_cert)
+
+        return cert_chain
+
+    except CertificateFetchingError as cfe:
+        raise cfe
+    except NoCertificatesError as nce:
+        raise nce
+    except IntermediateFetchingError as ife:
+        print("Failed to fetch intermediate")
+        return cert_chain
     except Exception as e:
-        print(f"Unable to fetch certificate chain for {domain}: {e}")
-        # exit()
+        raise CertificateFetchingError(
+            f"Error occured while getting certificates for: {domain}: {e}") from e
     finally:
         s.close()
         conn.close()
 
-    return certificates
+
+def fetch_intermediate_cert(end_cert):
+    intermediate_cert = None
+    aia_ext = end_cert.extensions["authorityInfoAccess"]["value"]
+
+    for endpoint in aia_ext:
+        if endpoint["access_method"] == "caIssuers":
+            intermediate_cert = endpoint["access_location"]
+            break
+
+    if intermediate_cert is None:
+        raise IntermediateFetchingError("No intermediate certificate found")
+
+    try:
+        response = requests.get(intermediate_cert)
+        response.raise_for_status()
+        return Cert_repr(crypto.load_certificate(crypto.FILETYPE_ASN1, response.content))
+
+    except Exception as e:
+        raise IntermediateFetchingError(
+            f"Failed to get intermediate certificate: {str(e)}") from e
 
 
 def validate_certificate_chain(domain, cert_chain, whitelist=None):
@@ -80,19 +123,15 @@ def validate_certificate_chain(domain, cert_chain, whitelist=None):
         return (True, result)
 
     except cert_errors.PathBuildingError as pbe:
-        print(f"{type(pbe)}: {str(pbe)}")
         ex = "Unable to find the necessary certificates to build the validation path"
         return (False, ex, str(pbe))
     except cert_errors.PathValidationError as pve:
-        print(f"{type(pve)}: {str(pve)}")
         ex = "An error occured while validating the certificate path"
         return (False, ex, str(pve))
     except cert_errors.InvalidCertificateError as ice:
-        print(f"{type(ice)}: {str(ice)}")
         ex = "Certificate is not valid"
         return (False, ex, str(ice))
     except Exception as e:
-        print(f"{type(e)}: {str(e)}")
         ex = f"Unhandled exception raised: {str(e)}"
         return (False, ex, str(e))
 

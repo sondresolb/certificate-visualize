@@ -1,11 +1,14 @@
 import requests
+import datetime
 from requests.exceptions import HTTPError
 
 from urllib.parse import urlsplit
 
 from cryptography import x509 as cryptography_x509
 from cryptography.hazmat.primitives.hashes import SHA1
+from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.backends import default_backend
 
 import visualize_exceptions as c_ex
 import visualize_tools as vis_tools
@@ -72,36 +75,24 @@ def check_ocsp(cert, issuer):
             continue
 
         endpoint_res["response_status"] = ocsp_response.response_status.name
-        print(f"OCSP Response status: {endpoint_res['response_status']}")
-
         if endpoint_res["response_status"] == 'SUCCESSFUL':
 
             # Verify ocsp response signature
             endpoint_res["verification_result"] = validate_ocsp_response(
-                host, ocsp_response, issuer)
-
-            print(
-                f"OCSP Certificate status: {ocsp_response.certificate_status.name}")
-            if endpoint_res["verification_result"]["valid"]:
-                print("OCSP Signature: VALID")
-            else:
-                print("OCSP Signature: INVALID")
-            print(
-                f"OCSP Signature key can sign: {endpoint_res['verification_result']['can_sign']}\n")
+                host, ocsp_response, issuer, cert.serial_number)
 
             endpoint_res["certificate_status"] = ocsp_response.certificate_status.name
             endpoint_res["certificate_status_msg"] = get_res_message(
                 endpoint_res["certificate_status"])
             endpoint_res["certificate_serial"] = ocsp_response.serial_number
             endpoint_res["signature_algorithm"] = ocsp_response.signature_algorithm_oid._name
-            endpoint_res["produced_at"] = ocsp_response.produced_at
-            endpoint_res["this_update"] = ocsp_response.this_update
-            endpoint_res["next_update"] = ocsp_response.next_update
+            endpoint_res["produced_at"] = ocsp_response.produced_at.ctime()
+            endpoint_res["this_update"] = ocsp_response.this_update.ctime()
+            endpoint_res["next_update"] = ocsp_response.next_update.ctime()
 
             if endpoint_res["certificate_status"] == 'REVOKED':
                 endpoint_res["revocation_time"] = ocsp_response.revocation_time
                 endpoint_res["revocation_reason"] = ocsp_response.revocation_reason
-
         else:
             endpoint_res["response_message"] = get_res_message(
                 endpoint_res["response_status"])
@@ -131,12 +122,58 @@ def get_ocsp_response(host, ocsp_endpoint, req_encoded):
             'Unhandled exception occured while requesting ocsp response') from e
 
 
-def validate_ocsp_response(host, ocsp_response, issuer):
+def validate_ocsp_response(host, ocsp_response, issuer, cert_serial_number):
     tbs_bytes = ocsp_response.tbs_response_bytes
     signature_bytes = ocsp_response.signature
     sig_hash_algo = ocsp_response.signature_hash_algorithm
     issuer_cert = issuer.crypto_cert
     key_certs = [issuer_cert]
+    validation_result = {
+        "valid": False, "validation_cert": None, "can_sign": False, "message": ""}
+
+    # Check that the certificate in question is the same as in the ocsp response
+    if ocsp_response.serial_number != cert_serial_number:
+        validation_result["message"] = ("Certificate beeing checked does not match "
+                                        "certificate in response")
+        return validation_result
+
+    # Check that the current time is greater than next_update field in the response
+    elif datetime.datetime.now() > ocsp_response.next_update:
+        validation_result["message"] = "OCSP next_update is earlier than local system time"
+        return validation_result
+
+    # Check that the current time is less than this_update field in the response
+    elif datetime.datetime.now() < ocsp_response.this_update:
+        validation_result["message"] = "OCSP this_update is greater than local system time"
+        return validation_result
+
+    # Validate the OCSP responder certificate chain
+    responder_valid, responder_res = validate_ocsp_responder(host)
+    if not responder_valid:
+        validation_result[
+            "message"] = f"OCSP responder certificate is not valid: {responder_res}"
+        return validation_result
+
+    # Check that the OCSP responder name or key_hash is the one intended for the request
+    # if ocsp_response.responder_name != host:
+    #     print(ocsp_response.responder_name)
+    #     if ocsp_response.responder_name is None:
+
+    #         digest = hashes.Hash(
+    #             SHA1(), backend=default_backend())
+
+    #         digest.update(responder_cert.public_key().public_bytes(
+    #             serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo))
+    #         key_cert_hash = digest.finalize()
+    #         if ocsp_response.responder_key_hash != key_cert_hash:
+    #             print(ocsp_response.responder_key_hash)
+    #             print(key_cert_hash)
+    #             validation_result["message"] = "OCSP responder name or key_hash does not match intended responder"
+    #             return validation_result
+
+    #     else:
+    #         validation_result["message"] = "OCSP responder name or key_hash does not match intended responder"
+    #         return validation_result
 
     # Check for certificate chain passed with response
     if ocsp_response.certificates:
@@ -148,24 +185,15 @@ def validate_ocsp_response(host, ocsp_response, issuer):
                                                       delegate_end.signature_hash_algorithm)
         if verifi_res[0]:
             key_certs.append(delegate_end)
-            print("OCSP: Response signed by delegate and validated with issuer key")
-
-        else:
-            # Try validating certificate chain of delegate issued by responder
-            delegate_validation_res = vis_tools.validate_certificate_chain(
-                host, ocsp_response.certificates)
-
-            if delegate_validation_res[0]:
-                key_certs.append(delegate_end)
-                print("OCSP: Response signed by delegate and validated by external key")
 
     valid, cert = vis_tools.signature_verification(
         key_certs, signature_bytes, tbs_bytes, sig_hash_algo)
 
-    validation_result = {"valid": valid,
-                         "validation_cert": cert, "can_sign": False}
+    validation_result["valid"] = valid
+    validation_result["validation_cert"] = cert
 
     if valid:
+        validation_result["message"] = "OCSP response successfully verified"
         # OCSP signing delegation must be explicit with id-kp-OCSPSigning extension
         if issuer.serial_number != cert.serial_number:
             ext_keyusage_oid = cryptography_x509.oid.ExtensionOID.EXTENDED_KEY_USAGE
@@ -181,6 +209,8 @@ def validate_ocsp_response(host, ocsp_response, issuer):
 
         else:
             validation_result["can_sign"] = True
+    else:
+        validation_result["message"] = "Not able to verify OCSP response with given keys"
 
     return validation_result
 
@@ -197,6 +227,28 @@ def build_ocsp_request(cert, issuer):
     except Exception as e:
         raise c_ex.OCSPRequestBuildError(
             f"Failed to build OCSP request") from e
+
+
+def validate_ocsp_responder(host):
+    try:
+        responder_cert_chain = [cert_obj.crypto_cert
+                                for cert_obj in vis_tools.fetch_certificate_chain(host)]
+
+    except c_ex.CertificateFetchingError as cfe:
+        return (False, str(cfe))
+    except c_ex.NoCertificatesError as nce:
+        return (False, str(nce))
+
+    # Avoiding TLS hostname matching of end-certificate
+    responder_whitelist = [
+        responder_cert_chain[0].fingerprint(hashes.SHA1()).hex()]
+    responder_validation = vis_tools.validate_certificate_chain(
+        host, responder_cert_chain, responder_whitelist)
+
+    if responder_validation[0]:
+        return (True, responder_cert_chain[0])
+    else:
+        return (False, responder_validation[1])
 
 
 def get_res_message(response_status):

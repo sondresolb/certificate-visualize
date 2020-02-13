@@ -1,38 +1,42 @@
+import sys
 import visualize_tools as vis_tools
 import visualize_ocsp as vis_ocsp
 from visualize_certificate import Cert_repr
-from visualize_exceptions import OCSPRequestBuildError
+import visualize_exceptions as c_ex
 
 
 def main():
     vis_tools.set_trust_store()     # Set custom trust store for validation
     run_stress_test()               # Run a stress test
 
-    domain = "tmall.com"
-    cert_chain = [Cert_repr(cert)
-                  for cert in vis_tools.fetch_certificate_chain(domain)]
+    domain = "www.fronter.com"
 
-    if len(cert_chain) <= 1:
-        print("Only end-certificate provided by server")
+    try:
+        cert_chain = vis_tools.fetch_certificate_chain(domain)
+
+    except c_ex.CertificateFetchingError as cfe:
+        print(str(cfe))
+        sys.exit()
+    except c_ex.NoCertificatesError as nce:
+        print(str(nce))
+        sys.exit()
 
     validation_res = vis_tools.validate_certificate_chain(
         domain, [c.crypto_cert for c in cert_chain])
 
     if not validation_res[0]:
-        print(
-            f"Certificate chain provided by {domain} could not be validated!")
+        print(f"Chain validation for {domain} failed: {validation_res[1]}")
 
-    if len(cert_chain) > 1:
+    try:
         end_cert, issuer_cert = cert_chain[0], cert_chain[1]
+        ocsp_responses = vis_ocsp.check_ocsp(end_cert, issuer_cert)
 
-        try:
-            ocsp_responses = vis_ocsp.check_ocsp(end_cert, issuer_cert)
+        if ocsp_responses[0]:
+            ocsp_list = ocsp_responses[1]
+            print(ocsp_list)
 
-        except OCSPRequestBuildError as orbe:
-            print(str(orbe))
-
-    else:
-        print("OCSP: No check without intermediate certificates")
+    except c_ex.OCSPRequestBuildError as orbe:
+        print(str(orbe))
 
 
 def rep_cert(cert_obj):
@@ -54,7 +58,6 @@ def rep_cert(cert_obj):
 
 
 def run_stress_test():
-    import sys
     import json
     from urllib.parse import urlsplit
     uni_domains = []
@@ -64,31 +67,34 @@ def run_stress_test():
             uni_domains.extend([urlsplit(i).netloc for i in item["web_pages"]])
 
     for domain in uni_domains:
-        # Certificate parsing
-        cert_chain = [Cert_repr(cert)
-                      for cert in vis_tools.fetch_certificate_chain(domain)]
+        try:
+            cert_chain = vis_tools.fetch_certificate_chain(domain)
 
-        # Certificate chain validation
+        except c_ex.CertificateFetchingError as cfe:
+            print(str(cfe))
+            continue
+        except c_ex.NoCertificatesError as nce:
+            print(str(nce))
+            continue
+
         validation_res = vis_tools.validate_certificate_chain(
             domain, [c.crypto_cert for c in cert_chain])
 
         if not validation_res[0]:
-            print(
-                f"Certificate chain provided by {domain} could not be validated!")
+            print(f"Chain validation for {domain} failed: {validation_res[1]}")
 
-        # OCSP
-        if len(cert_chain) > 1:
+        try:
             end_cert, issuer_cert = cert_chain[0], cert_chain[1]
+            ocsp_responses = vis_ocsp.check_ocsp(end_cert, issuer_cert)
 
-            try:
-                ocsp_responses = vis_ocsp.check_ocsp(end_cert, issuer_cert)
+            if ocsp_responses[0]:
+                ocsp_list = ocsp_responses[1]
+                print(ocsp_list)
 
-            except OCSPRequestBuildError as orbe:
-                print(str(orbe))
-        else:
-            print("OCSP: No check without intermediates")
+        except c_ex.OCSPRequestBuildError as orbe:
+            print(str(orbe))
 
-        # CRL
+        print("\n\n")
 
     sys.exit()
 
