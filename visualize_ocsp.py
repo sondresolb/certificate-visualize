@@ -43,7 +43,7 @@ def check_ocsp(cert, issuer):
             list of results (dict) for each enpoint found
 
     Raises:
-        cert_visualize_exceptions.OCSPRequestBuildError():
+        (cert_visualize_exceptions.OCSPRequestBuildError):
             Raised if build_ocsp_request() fails
     """
     ocsp_responses = []
@@ -57,7 +57,7 @@ def check_ocsp(cert, issuer):
                 host = urlsplit(ocsp_endpoint).netloc
                 ocsp_endpoints.append((host, ocsp_endpoint))
 
-    else:
+    if not ocsp_endpoints:
         return (False, [{"no_ocsp": "No OCSP enpoint was found"}])
 
     req = build_ocsp_request(cert, issuer)
@@ -103,6 +103,25 @@ def check_ocsp(cert, issuer):
 
 
 def get_ocsp_response(host, ocsp_endpoint, req_encoded):
+    """Function for requesting ocsp response
+
+    Function for requesting ocsp response from ocsp responder.
+    A header is created where the host field is the ocsp responder
+    address and content type is set to be a ocsp request. The response
+    is encoded to a cryptography ocsp response object.
+
+    Args:
+        host (str): Address of ocsp responder (E.g., ocsp.digicert.com)
+        ocsp_endpoint (str): Address with protocol (E.g., http://ocsp.digicert.com)
+        req_encoded (bytes): DER encoded ocsp request as bytes
+
+    Returns:
+        (cryptography ocsp response object): The encoded response from the responder
+
+    Raises:
+        (cert_visualize_exceptions.OCSPRequestResponseError):
+            If an exception occured while fetching response
+    """
     headers = {'Host': host,
                'Content-Type': 'application/ocsp-request'}
 
@@ -123,36 +142,76 @@ def get_ocsp_response(host, ocsp_endpoint, req_encoded):
 
 
 def validate_ocsp_response(host, ocsp_response, issuer, cert_serial_number):
+    """Validation of the ocsp response
+
+    A function for validating the ocsp response. All relevant information like
+    tbs_bytes, signature_bytes and hash algorithm is extracted. It then checks if:
+        -   The certificate beeing checked is the same as the one indicated in the
+            response
+        -   next_update and this_update are adequate
+        -   Responder certificate chain is valid
+
+    Any certificates included in the response (delegates) are verified using the
+    issuer of the certificate beeing checked and added to the list of certificates
+    used in the verification process of the response signature. The signature is then
+    verified. If a delegate was used to verify the signature, an explicit check
+    is carried out to ensure it includes the id-kp-OCSPSigning extension. If the
+    extension is not present, the certificate is not authorized to sign the response.
+    The information is compiled into a dictionary and returned. The <valid> field
+    inside validation_result is only True if all checks passed and the signature
+    was successfully verified.
+
+    Args:
+        host (str): The address of the ocsp responder
+        ocsp_response (cryptography ocsp object): The ocsp response
+        issuer (cryptography x509 certificate): The issuer of the checked certificate
+        cert_serial_number (int): Serial number of the checked certificate
+
+    Returns:
+        validation_result (dict): Result of the validation
+    """
     tbs_bytes = ocsp_response.tbs_response_bytes
     signature_bytes = ocsp_response.signature
     sig_hash_algo = ocsp_response.signature_hash_algorithm
     issuer_cert = issuer.crypto_cert
     key_certs = [issuer_cert]
     validation_result = {
-        "valid": False, "validation_cert": None, "can_sign": False, "message": ""}
+        "valid": False, "verification_cert": None, "can_sign": False, "message": ""}
+
+    checks_passed = True
 
     # Check that the certificate in question is the same as in the ocsp response
+    validation_result["cert_match"] = {"passed": True, "message": ""}
     if ocsp_response.serial_number != cert_serial_number:
-        validation_result["message"] = ("Certificate beeing checked does not match "
-                                        "certificate in response")
-        return validation_result
+        checks_passed = False
+        validation_result["cert_match"]["passed"] = False
+        validation_result["cert_match"]["message"] = (
+            "Certificate beeing checked does not match certificate in response")
 
     # Check that the current time is greater than next_update field in the response
-    elif datetime.datetime.now() > ocsp_response.next_update:
-        validation_result["message"] = "OCSP next_update is earlier than local system time"
-        return validation_result
+    validation_result["next_update"] = {"passed": True, "message": ""}
+    if datetime.datetime.now() > ocsp_response.next_update:
+        checks_passed = False
+        validation_result["next_update"]["passed"] = False
+        validation_result["next_update"]["message"] = (
+            "OCSP next_update is earlier than local system time")
 
     # Check that the current time is less than this_update field in the response
-    elif datetime.datetime.now() < ocsp_response.this_update:
-        validation_result["message"] = "OCSP this_update is greater than local system time"
-        return validation_result
+    validation_result["this_update"] = {"passed": True, "message": ""}
+    if datetime.datetime.now() < ocsp_response.this_update:
+        checks_passed = False
+        validation_result["this_update"]["passed"] = False
+        validation_result["this_update"]["message"] = (
+            "OCSP this_update is greater than local system time")
 
     # Validate the OCSP responder certificate chain
+    validation_result["responder_cert"] = {"passed": True, "message": ""}
     responder_valid, responder_res = validate_ocsp_responder(host)
     if not responder_valid:
-        validation_result[
-            "message"] = f"OCSP responder certificate is not valid: {responder_res}"
-        return validation_result
+        checks_passed = False
+        validation_result["responder_cert"]["passed"] = False
+        validation_result["responder_cert"]["message"] = (
+            f"OCSP responder certificate could not be validated: {responder_res}")
 
     # Check that the OCSP responder name or key_hash is the one intended for the request
     # if ocsp_response.responder_name != host:
@@ -189,12 +248,11 @@ def validate_ocsp_response(host, ocsp_response, issuer, cert_serial_number):
     valid, cert = vis_tools.signature_verification(
         key_certs, signature_bytes, tbs_bytes, sig_hash_algo)
 
-    validation_result["valid"] = valid
-    validation_result["validation_cert"] = cert
+    validation_result["signature_verified"] = valid
+    validation_result["verification_cert"] = cert
 
-    if valid:
-        validation_result["message"] = "OCSP response successfully verified"
-        # OCSP signing delegation must be explicit with id-kp-OCSPSigning extension
+    # OCSP signing delegation must be explicit with id-kp-OCSPSigning extension
+    if cert is not None:
         if issuer.serial_number != cert.serial_number:
             ext_keyusage_oid = cryptography_x509.oid.ExtensionOID.EXTENDED_KEY_USAGE
             try:
@@ -204,18 +262,39 @@ def validate_ocsp_response(host, ocsp_response, issuer, cert_serial_number):
                 return validation_result
 
             if any(keyusage.dotted_string == ("1.3.6.1.5.5.7.3.9")
-                   for keyusage in extended_keyusage):
+                    for keyusage in extended_keyusage):
                 validation_result["can_sign"] = True
-
         else:
             validation_result["can_sign"] = True
+
+    validation_result["valid"] = valid and checks_passed and validation_result["can_sign"]
+
+    if validation_result["valid"]:
+        validation_result["message"] = "OCSP response successfully validated"
     else:
-        validation_result["message"] = "Not able to verify OCSP response with given keys"
+        validation_result["message"] = "OCSP response validation failed"
 
     return validation_result
 
 
 def build_ocsp_request(cert, issuer):
+    """Function for building the ocsp request
+
+    The cryptography ocsp request builder takes in the certificate
+    to be checked and the issuer of that certificate. The request
+    is then hashed using the SHA1 algorithm.
+
+    Args:
+        cert (cert_repr): The certificate to be checked
+        issuer (cert_repr): The issuer of the certificate in question
+
+    Returns:
+        (cryptography request object): The ocsp request, DER serialized
+
+    Raises:
+        (visualize_exceptions.OCSPRequestBuildError):
+            If any error occured during request building
+    """
     try:
         builder = cryptography_x509.ocsp.OCSPRequestBuilder()
         builder = builder.add_certificate(
@@ -230,6 +309,20 @@ def build_ocsp_request(cert, issuer):
 
 
 def validate_ocsp_responder(host):
+    """Validate the certificate chain of the ocsp responder
+
+    Fetches the ocsp responder certificate chain and validates it.
+    The fingerprint of the end entity certificate is added to the
+    whitelist to avoid hostname matching. 
+
+    Args:
+        host (str): Address of ocsp responder
+
+    Returns:
+        tuple(bool, str):
+            (bool): If validation was successful
+            (str): The result message
+    """
     try:
         responder_cert_chain = [cert_obj.crypto_cert
                                 for cert_obj in vis_tools.fetch_certificate_chain(host)]
@@ -248,7 +341,7 @@ def validate_ocsp_responder(host):
     if responder_validation[0]:
         return (True, responder_cert_chain[0])
     else:
-        return (False, responder_validation[1])
+        return (False, f"{responder_validation[1]}: {responder_validation[2]}")
 
 
 def get_res_message(response_status):

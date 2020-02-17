@@ -1,3 +1,7 @@
+class InvalidCertificateChain(Exception):
+    pass
+
+
 class NoCertificatesError(Exception):
     pass
 

@@ -13,7 +13,7 @@ from cryptography.exceptions import InvalidSignature
 from certvalidator import CertificateValidator, ValidationContext
 from certvalidator import errors as cert_errors
 from visualize_exceptions import CertificateFetchingError, NoCertificatesError
-from visualize_exceptions import IntermediateFetchingError
+from visualize_exceptions import IntermediateFetchingError, InvalidCertificateChain
 from visualize_certificate import Cert_repr
 
 
@@ -21,6 +21,31 @@ TRUST_STORE = None
 
 
 def fetch_certificate_chain(domain):
+    """Connect to a server and ask for certificate chain
+
+    Takes in a domain which gets idna encoded, connects to the
+    server using SSL v2 or v3 and asks for the certificate chain of
+    the server. The chain is then sorted. If the chain only contains one
+    certificate, it will try to check the AIA extension for a refrence to
+    an intermedia certificate.
+
+    Args:
+        domian (str): The domain you want the certificate chain for
+
+    Returns:
+        cert_chain (list): sorted list of cert_repr objects
+
+    Raises:
+        (visualize_exceptions.NoCertificatesError):
+            If no certificates were given by the server
+
+        (visualize_exceptions.IntermediateFetchingError):
+            If fetching of intermediate certificate failed
+
+        (visualize_exceptions.CertificateFetchingError):
+            If the connection failed, parsing failed or any other
+            exception occured during the fetching.
+    """
     certificates = []
 
     hostname = idna.encode(domain)
@@ -44,7 +69,7 @@ def fetch_certificate_chain(domain):
             raise NoCertificatesError(
                 f"No certificates found for domain: {domain}")
 
-        cert_chain = [Cert_repr(cert) for cert in certificates]
+        cert_chain = sort_chain([Cert_repr(cert) for cert in certificates])
 
         if len(cert_chain) == 1:
             inter_cert = fetch_intermediate_cert(cert_chain[0])
@@ -52,24 +77,43 @@ def fetch_certificate_chain(domain):
 
         return cert_chain
 
-    except CertificateFetchingError as cfe:
-        raise cfe
-    except NoCertificatesError as nce:
-        raise nce
     except IntermediateFetchingError as ife:
-        print("Failed to fetch intermediate")
+        print(f"Failed to fetch intermediate certificate: {str(ife)}")
         return cert_chain
     except Exception as e:
         raise CertificateFetchingError(
-            f"Error occured while getting certificates for: {domain}: {e}") from e
+            f"Error occured while getting certificates for {domain}: {type(e)}: {e}") from e
     finally:
         s.close()
         conn.close()
 
 
 def fetch_intermediate_cert(end_cert):
+    """Get intermediate certificate if only one was served by the server
+
+    Takes in an end entity certificate of a chain and looks up the
+    Authority information access extension to fetch the intermediate
+    certificate. The fetched certificate is encoded into a crypto.x509
+    certificate object and then parsed into a cert_repr object.
+
+    Args:
+        end_cert (cert_repr): The end entity certificate
+
+    Returns:
+        (cert_repr): The parsed intermediate certificate
+
+    Raises:
+        (visualize_exceptions.IntermediateFetchingError):
+            If there is no AIA extension or the fetching failed
+    """
     intermediate_cert = None
-    aia_ext = end_cert.extensions["authorityInfoAccess"]["value"]
+    cert_ext = end_cert.extensions
+    aia_ext = cert_ext.get("authorityInfoAccess", None)
+    if aia_ext is None:
+        raise IntermediateFetchingError(
+            "No intermediate AIA certificate info found")
+
+    aia_ext = aia_ext["value"]
 
     for endpoint in aia_ext:
         if endpoint["access_method"] == "caIssuers":
@@ -102,8 +146,8 @@ def validate_certificate_chain(domain, cert_chain, whitelist=None):
 
     Returns:
         tuple(bool, ValidationPath):
-            bool: If the validation was successful
-            ValidationPath: Iterable of certificate objects representing the path
+            (bool): If the validation was successful
+            (ValidationPath): Iterable of certificate objects representing the path
     """
     try:
         der_certs = [cert.public_bytes(
@@ -137,6 +181,28 @@ def validate_certificate_chain(domain, cert_chain, whitelist=None):
 
 
 def signature_verification(key_certs, signature_bytes, tbs_bytes, sig_hash_algo):
+    """Verify the signature given a public key and some bytes
+
+    A function for verifying the signature of some data given the public
+    key that signed the data, the signature, the bytes that was signed and
+    the hash algorithm used. The function will run over a list of certificates
+    and extract the public key for each. It will check the type of the key and
+    try to verify the signature. If the key is of type RSAPublicKey, two
+    different padding schemes will be tested. The return value is a tuple where
+    the first value indicates if the verification was successful, and the second
+    contains the certificate that verified the signaure or None.
+
+    Args:
+        key_certs (list): List of possible certificates that signed the data
+        signature_bytes (bytes): The signature as bytes
+        tbs_bytes (bytes): The data that was signed to produce signature_bytes
+        sig_hash_algo (cryptography.hazmat.primitives.hashes.HashAlgorithm): Hash used
+
+    Returns:
+        tuple(bool, cryptography.x509 certificate OR None):
+            (bool): If the signature could be verified
+            (certificate): The certificate used to sign the data
+    """
     # Try validating signature for each available key
     for pub_cert in key_certs:
         if isinstance(pub_cert.public_key(), asymmetric.rsa.RSAPublicKey):
@@ -165,6 +231,22 @@ def signature_verification(key_certs, signature_bytes, tbs_bytes, sig_hash_algo)
 
 
 def verify_signature(pub_key, *verify_args):
+    """Wrapper function around cryptography's verify
+
+    A function that wrappes around the cryptography public key
+    verification function. This enables the verification function
+    to be used regardless of the type of key used. (E.g., The RSA
+    key must take in padding as an additional argument to verify()).
+    The verify function raises InvalidSignature if the verification
+    failed.
+
+    Args:
+        pub_key (cryptography public key): The key used for verification
+        *verify_args (list): List of additional arguments passed to verify
+
+    Returns:
+        (bool): If the verification was successful or not
+    """
     try:
         pub_key.verify(*verify_args)
 
@@ -175,6 +257,70 @@ def verify_signature(pub_key, *verify_args):
 
 
 def set_trust_store():
+    """Set custom trusted root store
+
+    If called, this function will set the currently active
+    trust store to be the one provided by the certifi package.
+    Certifi is a carefully curated collection of Root Certificates
+    for validating the trustworthiness of SSL certificates while
+    verifying the identity of TLS hosts. It has been extracted from
+    the python Requests project.
+    """
     global TRUST_STORE
     pem_certs = pem.parse_file(certifi.where())
     TRUST_STORE = [pem_cert.as_bytes() for pem_cert in pem_certs]
+
+
+def sort_chain(cert_chain):
+    """Sort certificate chain
+
+    Takes in a certificate chain and checks if the order
+    is correct. If not, then it sorts them in the 
+    correct order. Duplicates are removed from the chain.
+
+    Args:
+        cert_chain (list): List of cert_repr objects
+
+    Returns:
+        (list): Either the original list or a new chain
+    """
+    final_cert = None
+    new_chain = []
+
+    # Check if order is correct
+    for index, cert in enumerate(cert_chain):
+        if index == len(cert_chain)-1:
+            return cert_chain
+        elif cert.issuer != cert_chain[index+1].subject:
+            break
+
+    # Extract all subjects to determine the last certificate
+    all_subjects = [cert.subject for cert in cert_chain]
+
+    for cert in cert_chain:
+        if cert.issuer not in all_subjects or cert.issuer == cert.subject:
+            final_cert = cert
+
+    if final_cert is None:
+        raise InvalidCertificateChain("Certificate chain provided is"
+                                      "not a valid chain")
+
+    # Map out issuers and remove duplicates
+    # key: issuer(str), value: subject(obj)
+    issuer_map = {cert.issuer["commonName"]:
+                  cert for cert in cert_chain if cert.subject != final_cert.subject}
+
+    try:
+        current_cert = issuer_map[final_cert.subject["commonName"]]
+        new_chain.append(final_cert)
+        new_chain.insert(0, current_cert)
+
+        for _ in range(len(issuer_map)-1):
+            current_cert = issuer_map[current_cert.subject["commonName"]]
+            new_chain.insert(0, current_cert)
+
+        return new_chain
+
+    except KeyError:
+        raise InvalidCertificateChain("Certificate chain provided is "
+                                      "not a valid chain")

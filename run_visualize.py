@@ -7,9 +7,10 @@ import visualize_exceptions as c_ex
 
 def main():
     vis_tools.set_trust_store()     # Set custom trust store for validation
-    run_stress_test()               # Run a stress test
+    # run_stress_test()               # Run a stress test
 
-    domain = "www.fronter.com"
+    certificate_result = {}
+    domain = "www.digipen.edu"
 
     try:
         cert_chain = vis_tools.fetch_certificate_chain(domain)
@@ -20,23 +21,32 @@ def main():
     except c_ex.NoCertificatesError as nce:
         print(str(nce))
         sys.exit()
+    except c_ex.InvalidCertificateChain as icc:
+        print(str(icc))
+        sys.exit()
 
+    # Certificate path validation
     validation_res = vis_tools.validate_certificate_chain(
         domain, [c.crypto_cert for c in cert_chain])
 
     if not validation_res[0]:
         print(f"Chain validation for {domain} failed: {validation_res[1]}")
+        print(f"Details: {validation_res[2]}")
 
+    # OCSP Checking
     try:
-        end_cert, issuer_cert = cert_chain[0], cert_chain[1]
-        ocsp_responses = vis_ocsp.check_ocsp(end_cert, issuer_cert)
+        if len(cert_chain) > 1:
+            end_cert, issuer_cert = cert_chain[0], cert_chain[1]
+            ocsp_responses = vis_ocsp.check_ocsp(end_cert, issuer_cert)
 
-        if ocsp_responses[0]:
-            ocsp_list = ocsp_responses[1]
-            print(ocsp_list)
+            if ocsp_responses[0]:
+                ocsp_list = ocsp_responses[1]
+                print(ocsp_list)
 
     except c_ex.OCSPRequestBuildError as orbe:
         print(str(orbe))
+
+    # CRL Checking ...
 
 
 def rep_cert(cert_obj):
@@ -84,17 +94,18 @@ def run_stress_test():
             print(f"Chain validation for {domain} failed: {validation_res[1]}")
 
         try:
-            end_cert, issuer_cert = cert_chain[0], cert_chain[1]
-            ocsp_responses = vis_ocsp.check_ocsp(end_cert, issuer_cert)
+            if len(cert_chain) > 1:
+                end_cert, issuer_cert = cert_chain[0], cert_chain[1]
+                ocsp_responses = vis_ocsp.check_ocsp(end_cert, issuer_cert)
 
-            if ocsp_responses[0]:
-                ocsp_list = ocsp_responses[1]
-                print(ocsp_list)
+                if ocsp_responses[0]:
+                    ocsp_list = ocsp_responses[1]
+                    print(ocsp_list)
 
         except c_ex.OCSPRequestBuildError as orbe:
             print(str(orbe))
 
-        print("\n\n")
+        print("\n")
 
     sys.exit()
 
