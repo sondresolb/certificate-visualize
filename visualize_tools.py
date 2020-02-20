@@ -3,18 +3,18 @@ import pem
 import requests
 import certifi
 from socket import socket
+
+import visualize_exceptions as vis_ex
+from visualize_certificate import Cert_repr
+
 from OpenSSL import SSL, crypto
 
 from cryptography.hazmat.primitives.hashes import SHA256
 from cryptography.hazmat.primitives import asymmetric, serialization
-from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.exceptions import InvalidSignature
 
-from certvalidator import CertificateValidator, ValidationContext
 from certvalidator import errors as cert_errors
-from visualize_exceptions import CertificateFetchingError, NoCertificatesError
-from visualize_exceptions import IntermediateFetchingError, InvalidCertificateChain
-from visualize_certificate import Cert_repr
+from certvalidator import CertificateValidator, ValidationContext
 
 
 TRUST_STORE = None
@@ -66,10 +66,15 @@ def fetch_certificate_chain(domain):
         certificates = conn.get_peer_cert_chain()
 
         if len(certificates) == 0:
-            raise NoCertificatesError(
+            raise vis_ex.NoCertificatesError(
                 f"No certificates found for domain: {domain}")
 
-        cert_chain = sort_chain([Cert_repr(cert) for cert in certificates])
+        cert_chain = [Cert_repr(cert) for cert in certificates]
+
+        try:
+            cert_chain = sort_chain(cert_chain)
+        except vis_ex.InvalidCertificateChain as icc:
+            print(str(icc))
 
         if len(cert_chain) == 1:
             inter_cert = fetch_intermediate_cert(cert_chain[0])
@@ -77,11 +82,11 @@ def fetch_certificate_chain(domain):
 
         return cert_chain
 
-    except IntermediateFetchingError as ife:
+    except vis_ex.IntermediateFetchingError as ife:
         print(f"Failed to fetch intermediate certificate: {str(ife)}")
         return cert_chain
     except Exception as e:
-        raise CertificateFetchingError(
+        raise vis_ex.CertificateFetchingError(
             f"Error occured while getting certificates for {domain}: {type(e)}: {e}") from e
     finally:
         s.close()
@@ -110,7 +115,7 @@ def fetch_intermediate_cert(end_cert):
     cert_ext = end_cert.extensions
     aia_ext = cert_ext.get("authorityInfoAccess", None)
     if aia_ext is None:
-        raise IntermediateFetchingError(
+        raise vis_ex.IntermediateFetchingError(
             "No intermediate AIA certificate info found")
 
     aia_ext = aia_ext["value"]
@@ -121,7 +126,8 @@ def fetch_intermediate_cert(end_cert):
             break
 
     if intermediate_cert is None:
-        raise IntermediateFetchingError("No intermediate certificate found")
+        raise vis_ex.IntermediateFetchingError(
+            "No intermediate certificate found")
 
     try:
         response = requests.get(intermediate_cert)
@@ -129,7 +135,7 @@ def fetch_intermediate_cert(end_cert):
         return Cert_repr(crypto.load_certificate(crypto.FILETYPE_ASN1, response.content))
 
     except Exception as e:
-        raise IntermediateFetchingError(
+        raise vis_ex.IntermediateFetchingError(
             f"Failed to get intermediate certificate: {str(e)}") from e
 
 
@@ -206,10 +212,10 @@ def signature_verification(key_certs, signature_bytes, tbs_bytes, sig_hash_algo)
     # Try validating signature for each available key
     for pub_cert in key_certs:
         if isinstance(pub_cert.public_key(), asymmetric.rsa.RSAPublicKey):
-            pss_padding = padding.PSS(mgf=padding.MGF1(
-                SHA256()), salt_length=padding.PSS.MAX_LENGTH)
+            pss_padding = asymmetric.padding.PSS(mgf=asymmetric.padding.MGF1(
+                SHA256()), salt_length=asymmetric.padding.PSS.MAX_LENGTH)
 
-            for pad in (padding.PKCS1v15(), pss_padding):
+            for pad in (asymmetric.padding.PKCS1v15(), pss_padding):
                 if verify_signature(pub_cert.public_key(), signature_bytes,
                                     tbs_bytes, pad, sig_hash_algo):
                     return (True, pub_cert)
@@ -283,6 +289,10 @@ def sort_chain(cert_chain):
 
     Returns:
         (list): Either the original list or a new chain
+
+    Raises:
+        (visualize_exceptions.InvalidCertificateChain):
+            If chain could not be sorted correctly
     """
     final_cert = None
     new_chain = []
@@ -300,10 +310,11 @@ def sort_chain(cert_chain):
     for cert in cert_chain:
         if cert.issuer not in all_subjects or cert.issuer == cert.subject:
             final_cert = cert
+            break
 
     if final_cert is None:
-        raise InvalidCertificateChain("Certificate chain provided is"
-                                      "not a valid chain")
+        raise vis_ex.InvalidCertificateChain("Certificate chain provided is"
+                                             "not a correct chain")
 
     # Map out issuers and remove duplicates
     # key: issuer(str), value: subject(obj)
@@ -322,5 +333,5 @@ def sort_chain(cert_chain):
         return new_chain
 
     except KeyError:
-        raise InvalidCertificateChain("Certificate chain provided is "
-                                      "not a valid chain")
+        raise vis_ex.InvalidCertificateChain("Certificate chain provided is "
+                                             "not a correct chain")

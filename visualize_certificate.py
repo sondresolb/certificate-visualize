@@ -367,7 +367,7 @@ class Cert_repr:
 
         return extension_obj
 
-    # seems to only exist as a CRL extension
+    # CRL extension
     @func_ref
     def deltaCRLIndicator(self, ext, me):
         """
@@ -409,7 +409,7 @@ class Cert_repr:
 
         return extension_obj
 
-    # seems to only exist as a CRL extension
+    # CRL extension
     @func_ref
     def freshestCRL(self, ext, me):
         """

@@ -31,7 +31,7 @@ def check_ocsp(cert, issuer):
         2.  A certificate which is signed by the same issuer as the certificate beeing checked
         3.  A certificate issued by the OCSP responder certificate
 
-        (https://www.ibm.com/support/knowledgecenter/SSFKSJ_9.1.0/com.ibm.mq.explorer.doc/e_auth_info_ocsp.htm)
+        https://tools.ietf.org/html/rfc6960#page-6 (page 6)
 
     Args:
         cert (cert_repr): The certificate beeing checked
@@ -69,7 +69,7 @@ def check_ocsp(cert, issuer):
 
         try:
             ocsp_response = get_ocsp_response(host, ocsp_endpoint, req)
-        except c_ex.OCSPRequestResponseError as orre:
+        except c_ex.RequestResponseError as orre:
             endpoint_res["no_response"] = f"Failed to fetch OCSP response: {str(orre)}"
             ocsp_responses.append(endpoint_res)
             continue
@@ -119,7 +119,7 @@ def get_ocsp_response(host, ocsp_endpoint, req_encoded):
         (cryptography ocsp response object): The encoded response from the responder
 
     Raises:
-        (cert_visualize_exceptions.OCSPRequestResponseError):
+        (cert_visualize_exceptions.RequestResponseError):
             If an exception occured while fetching response
     """
     headers = {'Host': host,
@@ -133,12 +133,14 @@ def get_ocsp_response(host, ocsp_endpoint, req_encoded):
         return cryptography_x509.ocsp.load_der_ocsp_response(response.content)
 
     except HTTPError as http_err:
-        raise c_ex.OCSPRequestResponseError(
-            'HTTP error occurred while requesting ocsp response') from http_err
+        raise c_ex.RequestResponseError(
+            'HTTP error occurred while requesting ocsp response'
+            f'from {ocsp_endpoint})') from http_err
 
     except Exception as e:
-        raise c_ex.OCSPRequestResponseError(
-            'Unhandled exception occured while requesting ocsp response') from e
+        raise c_ex.RequestResponseError(
+            'Unhandled exception occured while requesting ocsp'
+            f'response from {ocsp_endpoint}') from e
 
 
 def validate_ocsp_response(host, ocsp_response, issuer, cert_serial_number):
@@ -146,10 +148,10 @@ def validate_ocsp_response(host, ocsp_response, issuer, cert_serial_number):
 
     A function for validating the ocsp response. All relevant information like
     tbs_bytes, signature_bytes and hash algorithm is extracted. It then checks if:
-        -   The certificate beeing checked is the same as the one indicated in the
-            response
+        -   The certificate beeing checked is the same as the one indicated in the response
         -   next_update and this_update are adequate
         -   Responder certificate chain is valid
+        https://tools.ietf.org/html/rfc6960#page-10 (page 9-10)
 
     Any certificates included in the response (delegates) are verified using the
     issuer of the certificate beeing checked and added to the list of certificates

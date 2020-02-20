@@ -18,5 +18,5 @@ class OCSPRequestBuildError(Exception):
     pass
 
 
-class OCSPRequestResponseError(Exception):
+class RequestResponseError(Exception):
     pass

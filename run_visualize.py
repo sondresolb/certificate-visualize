@@ -1,7 +1,9 @@
 import sys
+
+from visualize_certificate import Cert_repr
 import visualize_tools as vis_tools
 import visualize_ocsp as vis_ocsp
-from visualize_certificate import Cert_repr
+import visualize_crl as vis_crl
 import visualize_exceptions as c_ex
 
 
@@ -10,7 +12,7 @@ def main():
     # run_stress_test()               # Run a stress test
 
     certificate_result = {}
-    domain = "www.digipen.edu"
+    domain = "www.github.com"
 
     try:
         cert_chain = vis_tools.fetch_certificate_chain(domain)
@@ -33,10 +35,16 @@ def main():
         print(f"Chain validation for {domain} failed: {validation_res[1]}")
         print(f"Details: {validation_res[2]}")
 
+    end_cert = cert_chain[0]
+
+    # CRL Checking ...
+    vis_crl.check_crl(end_cert)
+    sys.exit()
+
     # OCSP Checking
     try:
         if len(cert_chain) > 1:
-            end_cert, issuer_cert = cert_chain[0], cert_chain[1]
+            issuer_cert = cert_chain[1]
             ocsp_responses = vis_ocsp.check_ocsp(end_cert, issuer_cert)
 
             if ocsp_responses[0]:
@@ -45,8 +53,6 @@ def main():
 
     except c_ex.OCSPRequestBuildError as orbe:
         print(str(orbe))
-
-    # CRL Checking ...
 
 
 def rep_cert(cert_obj):
@@ -93,9 +99,16 @@ def run_stress_test():
         if not validation_res[0]:
             print(f"Chain validation for {domain} failed: {validation_res[1]}")
 
+        end_cert = cert_chain[0]
+
+        # CRL Checking ...
+        vis_crl.check_crl(end_cert)
+        print("\n")
+        continue
+
         try:
             if len(cert_chain) > 1:
-                end_cert, issuer_cert = cert_chain[0], cert_chain[1]
+                issuer_cert = cert_chain[1]
                 ocsp_responses = vis_ocsp.check_ocsp(end_cert, issuer_cert)
 
                 if ocsp_responses[0]:
