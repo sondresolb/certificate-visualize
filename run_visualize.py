@@ -38,7 +38,7 @@ def main():
     end_cert = cert_chain[0]
 
     # CRL Checking ...
-    vis_crl.check_crl(end_cert)
+    vis_crl.check_crl(end_cert, cert_chain[1])
     sys.exit()
 
     # OCSP Checking

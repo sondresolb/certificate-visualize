@@ -215,27 +215,6 @@ def validate_ocsp_response(host, ocsp_response, issuer, cert_serial_number):
         validation_result["responder_cert"]["message"] = (
             f"OCSP responder certificate could not be validated: {responder_res}")
 
-    # Check that the OCSP responder name or key_hash is the one intended for the request
-    # if ocsp_response.responder_name != host:
-    #     print(ocsp_response.responder_name)
-    #     if ocsp_response.responder_name is None:
-
-    #         digest = hashes.Hash(
-    #             SHA1(), backend=default_backend())
-
-    #         digest.update(responder_cert.public_key().public_bytes(
-    #             serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo))
-    #         key_cert_hash = digest.finalize()
-    #         if ocsp_response.responder_key_hash != key_cert_hash:
-    #             print(ocsp_response.responder_key_hash)
-    #             print(key_cert_hash)
-    #             validation_result["message"] = "OCSP responder name or key_hash does not match intended responder"
-    #             return validation_result
-
-    #     else:
-    #         validation_result["message"] = "OCSP responder name or key_hash does not match intended responder"
-    #         return validation_result
-
     # Check for certificate chain passed with response
     if ocsp_response.certificates:
         delegate_end = ocsp_response.certificates[0]
