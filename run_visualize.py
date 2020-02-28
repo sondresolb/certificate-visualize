@@ -12,7 +12,7 @@ def main():
     # run_stress_test()               # Run a stress test
 
     certificate_result = {}
-    domain = "www.github.com"
+    domain = "www.yahoo.com"
 
     try:
         cert_chain = vis_tools.fetch_certificate_chain(domain)
@@ -76,13 +76,17 @@ def rep_cert(cert_obj):
 def run_stress_test():
     import json
     from urllib.parse import urlsplit
-    uni_domains = []
-    with open("uni_domains.json") as json_file:
-        uni_json = json.load(json_file)
-        for item in uni_json:
-            uni_domains.extend([urlsplit(i).netloc for i in item["web_pages"]])
+    domains = []
+    # with open("uni_domains.json") as json_file:
+    #     uni_json = json.load(json_file)
+    #     for item in uni_json:
+    #         domains.extend([urlsplit(i).netloc for i in item["web_pages"]])
 
-    for domain in uni_domains:
+    with open("top-1m.json") as json_file:
+        domains_json = json.load(json_file)
+        domains = domains_json["endpoints"]
+
+    for domain in domains:
         try:
             cert_chain = vis_tools.fetch_certificate_chain(domain)
 
@@ -100,9 +104,10 @@ def run_stress_test():
             print(f"Chain validation for {domain} failed: {validation_res[1]}")
 
         end_cert = cert_chain[0]
+        issuer_cert = cert_chain[1]
 
         # CRL Checking ...
-        vis_crl.check_crl(end_cert)
+        vis_crl.check_crl(end_cert, issuer_cert)
         print("\n")
         continue
 
