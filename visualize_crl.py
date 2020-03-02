@@ -3,146 +3,208 @@ import datetime
 from urllib.parse import urlsplit
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
+from cryptography.x509.oid import ExtensionOID as ext_oid
 from requests.exceptions import HTTPError
 import visualize_exceptions as c_ex
 
 
 def check_crl(end_cert, issuer):
+    """Check if the end_cert is included in any CRL found
+
+    The function checks if there is an issuer given. All
+    HTTP certificate revocation lists (CRLs) mentioned in
+    the end_cert are extracted from the crlDistributionPoints
+    extension, fetched and parsed into a crl_info dict containing
+    the endpoint string (e.g. http://crl3.digicert.com/some_crl.crl),
+    the CRL cryptography object and the CRL number (int). The
+    delta CRLs are then extracted from the freshestCrl extension
+    in the certificate, and in the CRLs mentioned in the certificate,
+    and goes through the same process. All the CRLs are then validated
+    and verified, excluding the CRLs that fails. If no CRLs were found
+    or no complete CRLs passed the validation, the CRL checking fails.
+    The end_cert is then matched against each CRL by serial number.
+    The revocation information and all other relevant information is
+    then collected and stored for each CRL.
+    The information is sourced from: https://tools.ietf.org/html/rfc5280#page-92
+    6.3.3. CRL Processing
+
+    Args:
+        end_cert (cert_repr): The certificate to be checked
+        issuer (cert_repr): The issuer of the end_cert
+
+    Returns:
+        tuple(None or bool, dict or list):
+            If the CRL checking fails, the function will return a tuple
+            with None and a message why it failed. 
+            If the CRL checking is successful, the function will return
+            a tuple with a bool where True indicates the certificate was
+            found to be revoked or False if it is not revoked. The second
+            element will be a list of dict objects containing information
+            about each CRL endpoint, including if the CRL is a delta CRL
+            or not.
     """
-    1.  If the issuer of end-cert is the issuer of the crl,
-        then only the distribution-endpoint is present.
+    # Check for issuer certificate
+    if issuer is None:
+        return (None, {"no_crl": "Can not validate CRL information"
+                       "without the issuer certificate"})
 
-        If the certificate issuer is not the CRL
-        issuer, then the cRLIssuer field MUST be present and contain the Name
-        of the CRL issuer
+    # Fetch CRLs mentioned in the certificate and store with CRL number
+    certificate_crls = get_crls(
+        end_cert.crypto_cert, ext_oid.CRL_DISTRIBUTION_POINTS)
+    if not certificate_crls:
+        return (None, {"no_crl": "Unable to get CRL information from certificate"})
 
-    2. Full name has http url to fetch revocation list
-    3. If there is no distribution point extention. then no crl info given
-
-    CHECK: If CRLs provide Delta crls**
-
-    crl_list = [{endpoint: http://somecrl.crl, crl_number: 534, deltas: [{endpoint: ..., crl_number: 534}]}, {}]
-
-    steps:
-        - Extract crls from certificate (with crl number)
-        - Extract deltas from certificate (with crl number)
-        - Match certificate_deltas against certificate_crls
-        - send crls with deltas to validation
-        - append certificate deltas to list of all deltas before validation
-        - Validate all delta crls
-        - validate crl
-        - return list of complete crl with all valid deltas
-
-    """
-    crl_list = []
-    # List over CRLs referenced inside certificate
-    certificate_crl_list = []
-
-    # Get CRL extension from end-certificate
-    crl_dist_points = end_cert.extensions.get("cRLDistributionPoints", None)
-
-    if crl_dist_points:
-        # Extract HTTP CRL endpoints from CRL extention ([strings])
-        certificate_crl_endpoints = get_certificate_crl_enpoints(
-            crl_dist_points)
-
-        # Check if any HTTP CRL enpoints was found
-        if not certificate_crl_endpoints:
-            return (False, {"no_crl": "No HTTP CRL enpoints was found"})
-
-        # Fetch CRLs mentioned in the certificate and store with CRL number
-        certificate_crl_list = get_certificate_crls(certificate_crl_endpoints)
-
-        # Fetch delta CRLs mentioned in certificate
-        certificate_delta_crls = get_delta_crls(end_cert.crypto_cert)
-
-        # Compare CRL number in cert CRLs and delta CRLs and include if match
-        include_delta_crls(certificate_crl_list, certificate_delta_crls)
-
-        # Extract and include delta CRLs inside CRLs
-        for crl_info in certificate_crl_list:
-            crl_delta_crls = get_delta_crls(crl_info["crl"])
-            include_delta_crls(crl_info, crl_delta_crls)
-
-        print(certificate_crl_list)
-
-        # Do validation here ...
-        # Do revocation checking on validated CRLs here ...
-
-    else:
-        return (False, {"no_crl": "Certificate does not include CRL information"})
-
-
-def validate_crl(end_cert, issuer, complete_crl):
-    # If CRL has freshest CRL extension, get delta crl and do check below
-    # 1. Check that current time is before the value of the CRL next_update field
-    # 2. Validate signature of complete and possible delta CRL info
-    #       - can use Authority Information Access extention in crl to get issuer
-    # 3. If no crl could be validated, return status as False
-
-    validation_result = {"valid": False, "valid_crls": [], "delta": False}
+    # Extract and include delta CRLs inside CRLs
     delta_crls = []
+    for crl_info in certificate_crls:
+        delta_crls.extend(get_crls(crl_info["crl"], ext_oid.FRESHEST_CRL))
 
-    # TODO: The end_cert can also contain the FreshestCRL extension. CHECK THERE ALSO
-    # Look for delta CRL enpoints and fetch them
-    try:
-        delta_endpoints = []
-        delta_ext = complete_crl.extensions.get_extension_for_class(
-            x509.FreshestCRL)
-        for delta in delta_ext.value:
-            if delta.full_name:
-                delta_endpoints.append(delta.full_name)
+    # Fetch delta CRLs mentioned in certificate
+    delta_crls.extend(get_crls(
+        end_cert.crypto_cert, ext_oid.FRESHEST_CRL))
 
-        # Delta is true even if fetching fails
-        validation_result["delta"] = bool(delta_endpoints)
+    valid_crls = []
+    # Validate all complete CRLs found
+    for crl_info in certificate_crls:
+        if validate_crl(crl_info["crl"], issuer.crypto_cert):
+            valid_crls.append(crl_info)
 
-        delta_crls.extend(fetch_all_crls(delta_endpoints))
+    # Can only run revocation checking if there is a complete CRL
+    if not valid_crls:
+        return (None, {"no_crl": "Could not validate any given CRL"})
 
-    except x509.ExtensionNotFound:
-        print("Found no delta CRL information")
+    # Validate all delta CRLs found
+    for delta_info in delta_crls:
+        if valid_crls(delta_info["crl"], issuer.crypto_cert):
+            valid_crls.append(crl_info)
 
-    for crl_item in delta_crls:
-        valid = do_crl_validation(crl_item, issuer.crypto_cert.public_key())
-        if valid["valid"]:
-            validation_result["valid_crls"].append(crl_item)
+    certificate_revoked = False
+    for crl_info in valid_crls:
+        crl_info["issuer"] = crl_info["crl"].issuer
+        # Add delta CRL indicator to all CRLs
+        crl_info["is_delta"] = is_delta(crl_info["crl"])
+        hash_algo = crl_info["crl"].signature_hash_algorithm
+        crl_info["hash_algorithm"] = (hash_algo.name, hash_algo.digest_size)
+        crl_info["signature_algorithm"] = crl_info["crl"].signature_algorithm_oid._name
+        crl_info["next_update"] = crl_info["crl"].next_update.ctime()
+        crl_info["last_update"] = crl_info["crl"].last_update.ctime()
 
-    complete_valid = do_crl_validation(
-        complete_crl, issuer.crypto_cert.public_key())
+        # Do revocation checking of end_cert for all CRLs
+        revoked, revocation_info = is_revoked(
+            crl_info["crl"], end_cert.serial_number)
 
-    if not complete_valid["valid"]:
-        print("Complete CRL is not valid")
-        # If signature of complete CRL is invalid. Do not use
-        if complete_valid["reason"] == "signature":
-            return validation_result
-        # If it is old, check if there are any valid delta crls
-        elif validation_result["valid_crls"]:
-            validation_result["valid_crls"].append(complete_crl)
-        else:
-            return validation_result
-    else:
-        validation_result["valid_crls"].append(complete_crl)
-        validation_result["valid"] = True
+        crl_info["has_revoked"] = revoked
+        if revoked:
+            # If revoked, include all relevant revocation info
+            certificate_revoked = True
+            crl_info["revocation_info"] = revocation_info
 
-    return validation_result
+    return (certificate_revoked, valid_crls)
 
 
-def do_crl_validation(crl, issuer_key):
-    valid = {"valid": False, "reason": ""}
+def validate_crl(crl, issuer):
+    """Validation of a CRL
+
+    This function does a partial validation of a CRL.
+    It checks if the issuer of the CRL is the
+    same entity as the one who signed the certificate
+    beeing checked. It then checks if the current system
+    time is greater than the next_update field in the CRL.
+    The last check is to verify that the CRL signature using
+    the public key of the certificate issuer.
+
+    Args:
+        crl (cryptography.x509.CertificateRevocationList): CRL to validate
+        issuer (cryptography.x509.Certificate): Issuer of the end certificate
+
+    Returns:
+        (bool): True if the validation was successfull, or False if it was not
+    """
+    # Check that crl issuer matches certificate issuer
+    if not issuer.subject == crl.issuer:
+        print("CRL: crl issuer does not match cert issuer")
+        return False
+
+    # Check if current system time is greater than the crl next_update
     if datetime.datetime.now() > crl.next_update:
-        valid["reason"] = "next_update"
-        return valid
+        print("CRL: Current time is greater than the crl next_update")
+        return False
 
     # Verify signature of CRL using issuer of certificate
-    valid_sig = crl.is_signature_valid(issuer_key)
-    if not valid_sig:
-        valid["reason"] = "signature"
-        return valid
+    return crl.is_signature_valid(issuer.public_key())
 
-    valid["valid"] = True
-    return valid
+
+def is_revoked(crl, serial_number):
+    """Check if a certificate is mentioned in a CRL
+
+    This function checks if a certificate given by it's serial
+    number is included in a given CRL. If the certificate is
+    found in the CRL, then all relevant information is extracted,
+    including the revocation reason, if any is given.
+
+    Args:
+        crl (cryptography.x509.CertificateRevocationList): CRL
+        serial_number (int): Serial number of the certificate to check
+
+    Returns:
+        tuple(bool, dict or None):
+            The certificate is revoked if the bool is True.
+            If revoked, the second element includes the revocation
+            information or None if the bool is False.
+    """
+    result = crl.get_revoked_certificate_by_serial_number(serial_number)
+
+    if result is not None:
+        revocation_info = {"serial_number": result.serial_number,
+                           "revocation_date": result.revocation_date}
+
+        try:
+            reason_ext = crl.extensions.get_extension_for_class(x509.CRLReason)
+            reason_name = reason_ext.value.reason.name
+            revocation_info["reason"] = f"{reason_name}: {get_reason_message(reason_name)}"
+
+        except x509.ExtensionNotFound:
+            revocation_info["reason"] = "No reason specified"
+
+        return (True, revocation_info)
+
+    else:
+        return (False, None)
+
+
+def is_delta(crl):
+    """Checks if a CRL is a delta-CRL
+
+    Takes in a CRL and checks if it includes the deltaCrlIndicator
+    extension.
+
+    Args:
+        crl (cryptography.x509.CertificateRevocationList): CRL
+
+    Returns:
+        (bool): True if it includes the extension, or false if not.
+    """
+    try:
+        crl.extensions.get_extension_for_class(x509.DeltaCRLIndicator)
+        return True
+
+    except x509.ExtensionNotFound:
+        return False
 
 
 def fetch_crl(crl_endpoint):
+    """Function for fetching a CRL given an endpoint
+
+    Takes in a CRL endpoint string and fetches the DER encoded
+    CRL data. The data is then parsed into a cryptography.x509.
+    CertificateRevocationList object.
+
+    Args:
+        crl_endpoint (str): The HTTP endpoint string of the CRL
+
+    Returns:
+        (cryptography.x509.CertificateRevocationList): parsed CRL
+    """
     try:
         response = requests.get(crl_endpoint)
         response.raise_for_status()
@@ -158,77 +220,121 @@ def fetch_crl(crl_endpoint):
     return None
 
 
-def include_delta_crls(crls, deltas):
-    if deltas is not None:
-        for crl in crls:
-            for delta in deltas:
-                if delta["crl_number"] == crl["crl_number"]:
-                    crl["deltas"].append(delta)
+def get_crl_endpoints(crypto_obj, oid):
+    """Extract CRL endpoints from cryptography object
 
+    Takes in a cryptography object (certificate or CRL)
+    and extracts an extension with a list of
+    distribution points for a given oid. It then extracts
+    the full_name enpoint from each DP and checks that it
+    uses HTTP.
 
-def get_delta_crls(crypto_object):
-    delta_crls = []
-    delta_endpoints = []
+    Args:
+        crypto_obj (cryptography.x509...): The object to extract extension from
+        oid (cryptography.x509.oid.ExtensionOID): Extension object identifier
+
+    Returns:
+        (list): List of str endpoints or an empty list
+    """
+    endpoints = []
 
     try:
-        delta_extention = crypto_object.extensions.get_extension_for_class(
-            x509.FreshestCRL)
+        extension = crypto_obj.extensions.get_extension_for_oid(oid)
 
-        for dist_point in delta_extention:
+        for dist_point in extension.value:
             if dist_point.full_name is not None:
                 for name_item in dist_point.full_name:
-                    if urlsplit(name_item).scheme == "http":
-                        delta_endpoints.append(name_item)
+                    if urlsplit(name_item.value).scheme == "http":
+                        endpoints.append(name_item.value)
 
-        for delta_endpoint in delta_endpoints:
-            delta_crl = fetch_crl(delta_endpoint)
-            if delta_crl is not None:
-                crl_number = get_crl_number(delta_crl)
-                delta_crls.append(
-                    {"endpoint": delta_endpoint, "crl": delta_crl, "crl_number": crl_number})
-
-        if not delta_crls:
-            return None
-        else:
-            return delta_crls
+        return endpoints
 
     except x509.ExtensionNotFound:
-        return None
+        return []
 
 
-def get_certificate_crls(certificate_crl_endpoints):
+def get_crls(crypto_obj, extension_oid):
+    """Function for getting CRLs for a given crypto object
+
+    This function extracts all CRL endpoints from a crypto object,
+    fetches the CRLs from each endpoint, extracts the CRL number
+    from each CRL and returns it as a list of dictionaries.
+
+    Args:
+        crypto_obj (cryptography.x509...): Object to extract CRLs from
+        extension_oid (cryptography.x509.oid.ExtensionOID): Extension oid
+
+    Returns:
+        (list): List of dictionaries or an empty list
+    """
     crl_list = []
 
-    for crl_endpoint in certificate_crl_endpoints:
-        certificate_crl = fetch_crl(crl_endpoint)
-        if certificate_crl is not None:
-            crl_number = get_crl_number(certificate_crl)
+    # Extract HTTP CRL endpoints from CRL extention
+    crl_endpoints = get_crl_endpoints(
+        crypto_obj, extension_oid)
+
+    for crl_endpoint in crl_endpoints:
+        crl = fetch_crl(crl_endpoint)
+        if crl is not None:
+            crl_number = get_crl_number(crl)
             crl_list.append(
-                {"endpoint": crl_endpoint, "crl": certificate_crl,
-                 "crl_number": crl_number, "deltas": []})
+                {"endpoint": crl_endpoint, "crl": crl, "crl_number": crl_number})
 
     return crl_list
 
 
-def get_certificate_crl_enpoints(crl_dist_points):
-    crl_endpoints = []
-
-    for crl_enpoint in crl_dist_points["value"]:
-        full_name = crl_enpoint.get("full_name", None)
-        if full_name is not None:
-            for name_item in full_name:
-                if urlsplit(name_item).scheme == "http":
-                    crl_endpoints.append(name_item)
-
-    return crl_endpoints
-
-
 def get_crl_number(crl):
+    """Extract CRL number from CRL
+
+    Extracts the CRLNumber extension from the given CRL and
+    returns the value, or None if the extension is not present.
+
+    Args:
+        crl (cryptography.x509.CertificateRevocationList): CRL
+
+    Returns:
+        crl_number (int): The CRL number of the given CRL
+        or
+        None if the extension is not present
+    """
     try:
         number_ext = crl.extensions.get_extension_for_class(x509.CRLNumber)
-        print(number_ext)
         return number_ext.value.crl_number
 
     except x509.ExtensionNotFound:
         print("Failed to get CRL number")
         return None
+
+
+def get_reason_message(reason):
+    """Look up the reason string for a reason flag
+
+    Takes in a reason flag for a revocation object found
+    in a CRL and returns the meaning.
+
+    Args:
+        reason (str): The reason flag
+
+    Returns:
+        (str): The reason string for the revocation
+    """
+    if reason == "key_compromise":
+        reason_msg = "The private key was compromised"
+    elif reason == "ca_compromise":
+        reason_msg = "The CA that issued the certificate was compromised"
+    elif reason == "affiliation_changed":
+        reason_msg = "The subject’s name or other information has changed"
+    elif reason == "superseded":
+        reason_msg = "The certificate has been superseded"
+    elif reason == "cessation_of_operation":
+        reason_msg = "The certificate is no longer in operation"
+    elif reason == "certificate_hold":
+        reason_msg = "The certificate is currently on hold"
+    elif reason == "privilege_withdrawn":
+        reason_msg = "The privilege granted by this certificate have been withdrawn"
+    elif reason == "aa_compromise":
+        reason_msg = "The relevant attribute authority has been compromised"
+    else:
+        reason_msg = "Uknown reason"
+
+    return reason_msg

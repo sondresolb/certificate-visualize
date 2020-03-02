@@ -21,14 +21,15 @@ def check_ocsp(cert, issuer):
     <cert> is checked for OCSP endpoints, then included as an
     argument to the OCSPRequest builder together with <issuer>.
     The last argument to OCSPRequest builder is the hash function
-    used to hash specific fields in the request (eg. issuerNameHash, issuerKeyHash).
+    used to hash specific fields in the request (e.g. issuerKeyHash).
     The request is encoded to DER/ASN.1 and sent together with a header to 
     indicate the content type as an OCSP request. If the request was successful,
     the OCSP response is verified and relevant information is extracted.
 
     The OCSP response can be signed by:
         1.  The issuer of the certificate beeing checked
-        2.  A certificate which is signed by the same issuer as the certificate beeing checked
+        2.  A certificate which is signed by the same issuer as the
+            certificate beeing checked
         3.  A certificate issued by the OCSP responder certificate
 
         https://tools.ietf.org/html/rfc6960#page-6 (page 6)
@@ -39,8 +40,9 @@ def check_ocsp(cert, issuer):
 
     Returns:
         tuple(bool, list): 
-            First element indicating if ocsp is supported. Second element is the
-            list of results (dict) for each enpoint found
+            First element indicating if ocsp is supported. 
+            Second element is the list of results (dict) for
+            each enpoint found.
 
     Raises:
         (cert_visualize_exceptions.OCSPRequestBuildError):
