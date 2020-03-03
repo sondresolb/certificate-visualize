@@ -1,5 +1,4 @@
 import sys
-
 from visualize_certificate import Cert_repr
 import visualize_tools as vis_tools
 import visualize_ocsp as vis_ocsp
@@ -16,6 +15,8 @@ def main():
 
     try:
         cert_chain = vis_tools.fetch_certificate_chain(domain)
+        end_cert = cert_chain[0]
+        issuer_cert = cert_chain[1]
 
     except c_ex.CertificateFetchingError as cfe:
         print(str(cfe))
@@ -26,31 +27,27 @@ def main():
     except c_ex.InvalidCertificateChain as icc:
         print(str(icc))
         sys.exit()
+    except IndexError as ie:
+        issuer_cert = None
 
-    # Certificate path validation
+    # *Certificate path validation*
     validation_res = vis_tools.validate_certificate_chain(
         domain, [c.crypto_cert for c in cert_chain])
 
     if not validation_res[0]:
+        # This is a complete failure
         print(f"Chain validation for {domain} failed: {validation_res[1]}")
         print(f"Details: {validation_res[2]}")
 
-    end_cert = cert_chain[0]
+    # *CRL*
+    crl_status, crl_info = vis_crl.check_crl(end_cert, issuer_cert)
+    print(f"\nCert revoked in any CRL: {crl_status}, {crl_info}")
 
-    # CRL Checking ...
-    vis_crl.check_crl(end_cert)
-    sys.exit()
-
-    # OCSP Checking
+    # *OCSP*
     try:
-        if len(cert_chain) > 1:
-            issuer_cert = cert_chain[1]
-            ocsp_responses = vis_ocsp.check_ocsp(end_cert, issuer_cert)
-
-            if ocsp_responses[0]:
-                ocsp_list = ocsp_responses[1]
-                print(ocsp_list)
-
+        ocsp_support, ocsp_results = vis_ocsp.check_ocsp(
+            end_cert, issuer_cert)
+        # print(f"\nOCSP support: {ocsp_support}\nOCSP result: {ocsp_results}")
     except c_ex.OCSPRequestBuildError as orbe:
         print(str(orbe))
 
@@ -76,44 +73,52 @@ def rep_cert(cert_obj):
 def run_stress_test():
     import json
     from urllib.parse import urlsplit
-    uni_domains = []
-    with open("uni_domains.json") as json_file:
-        uni_json = json.load(json_file)
-        for item in uni_json:
-            uni_domains.extend([urlsplit(i).netloc for i in item["web_pages"]])
+    domains = []
+    # with open("uni_domains.json") as json_file:
+    #     uni_json = json.load(json_file)
+    #     for item in uni_json:
+    #         domains.extend([urlsplit(i).netloc for i in item["web_pages"]])
 
-    for domain in uni_domains:
+    with open("top-1m.json") as json_file:
+        domains_json = json.load(json_file)
+        domains = domains_json["endpoints"]
+
+    for domain in domains:
         try:
             cert_chain = vis_tools.fetch_certificate_chain(domain)
+            end_cert = cert_chain[0]
+            issuer_cert = cert_chain[1]
 
         except c_ex.CertificateFetchingError as cfe:
             print(str(cfe))
             continue
         except c_ex.NoCertificatesError as nce:
             print(str(nce))
-            continue
+            sys.exit()
+        except c_ex.InvalidCertificateChain as icc:
+            print(str(icc))
+            sys.exit()
+        except IndexError as ie:
+            issuer_cert = None
 
+        # Certificate path validation
         validation_res = vis_tools.validate_certificate_chain(
             domain, [c.crypto_cert for c in cert_chain])
 
         if not validation_res[0]:
+            # This is a complete failure
             print(f"Chain validation for {domain} failed: {validation_res[1]}")
+            print(f"Details: {validation_res[2]}")
 
-        end_cert = cert_chain[0]
+        # CRL Checking
+        crl_status, crl_info = vis_crl.check_crl(end_cert, issuer_cert)
+        print(f"Cert revoked in CRL: {crl_status}, {crl_info}")
 
-        # CRL Checking ...
-        vis_crl.check_crl(end_cert)
-        print("\n")
-        continue
-
+        # OCSP Checking
         try:
-            if len(cert_chain) > 1:
-                issuer_cert = cert_chain[1]
-                ocsp_responses = vis_ocsp.check_ocsp(end_cert, issuer_cert)
-
-                if ocsp_responses[0]:
-                    ocsp_list = ocsp_responses[1]
-                    print(ocsp_list)
+            ocsp_support, ocsp_results = vis_ocsp.check_ocsp(
+                end_cert, issuer_cert)
+            print(f"OCSP support: {ocsp_support}\nOCSP result: {ocsp_results}")
 
         except c_ex.OCSPRequestBuildError as orbe:
             print(str(orbe))

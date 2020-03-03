@@ -2,4 +2,5 @@ certificates
 __pycache__
 relevant_commands.txt
 uni_domains.json
+top-1m.json
 .vscode/launch.json

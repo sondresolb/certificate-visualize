@@ -71,14 +71,14 @@ def fetch_certificate_chain(domain):
 
         cert_chain = [Cert_repr(cert) for cert in certificates]
 
-        try:
-            cert_chain = sort_chain(cert_chain)
-        except vis_ex.InvalidCertificateChain as icc:
-            print(str(icc))
-
         if len(cert_chain) == 1:
             inter_cert = fetch_intermediate_cert(cert_chain[0])
             cert_chain.append(inter_cert)
+
+        try:
+            cert_chain = sort_chain(cert_chain, domain)
+        except vis_ex.InvalidCertificateChain as icc:
+            print(str(icc))
 
         return cert_chain
 
@@ -160,7 +160,7 @@ def validate_certificate_chain(domain, cert_chain, whitelist=None):
             serialization.Encoding.DER) for cert in cert_chain]
 
         valid_context = ValidationContext(
-            trust_roots=TRUST_STORE, whitelisted_certs=whitelist)
+            trust_roots=TRUST_STORE, whitelisted_certs=whitelist, allow_fetching=True)
 
         cert_validator = CertificateValidator(
             end_entity_cert=der_certs[0], intermediate_certs=der_certs[1:], validation_context=valid_context)
@@ -175,11 +175,14 @@ def validate_certificate_chain(domain, cert_chain, whitelist=None):
     except cert_errors.PathBuildingError as pbe:
         ex = "Unable to find the necessary certificates to build the validation path"
         return (False, ex, str(pbe))
+    except cert_errors.RevokedError as re:
+        ex = "The certificate or a certificate in the chain has been revoked"
+        return (False, ex, str(re))
     except cert_errors.PathValidationError as pve:
         ex = "An error occured while validating the certificate path"
         return (False, ex, str(pve))
     except cert_errors.InvalidCertificateError as ice:
-        ex = "Certificate is not valid"
+        ex = "Certificate is not valid for TLS or the hostname does not match"
         return (False, ex, str(ice))
     except Exception as e:
         ex = f"Unhandled exception raised: {str(e)}"
@@ -277,7 +280,7 @@ def set_trust_store():
     TRUST_STORE = [pem_cert.as_bytes() for pem_cert in pem_certs]
 
 
-def sort_chain(cert_chain):
+def sort_chain(cert_chain, domain):
     """Sort certificate chain
 
     Takes in a certificate chain and checks if the order
@@ -313,8 +316,9 @@ def sort_chain(cert_chain):
             break
 
     if final_cert is None:
-        raise vis_ex.InvalidCertificateChain("Certificate chain provided is"
-                                             "not a correct chain")
+        raise vis_ex.InvalidCertificateChain(
+            f"Certificate chain for {domain} is not a correct chain:\n"
+            f"{[(c.subject['commonName'], c.issuer['commonName']) for c in cert_chain]}")
 
     # Map out issuers and remove duplicates
     # key: issuer(str), value: subject(obj)
@@ -333,5 +337,6 @@ def sort_chain(cert_chain):
         return new_chain
 
     except KeyError:
-        raise vis_ex.InvalidCertificateChain("Certificate chain provided is "
-                                             "not a correct chain")
+        raise vis_ex.InvalidCertificateChain(
+            f"Certificate chain for {domain} is not a correct chain:\n"
+            f"{[(c.subject['commonName'], c.issuer['commonName']) for c in cert_chain]}")
