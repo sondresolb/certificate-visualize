@@ -368,6 +368,16 @@ def has_ct_poison(end_cert):
         return (False, None)
 
 
+def has_ocsp_must_staple(end_cert):
+    tls_feature = end_cert.extensions.get("TLSFeature", None)
+    if tls_feature is not None:
+        # It is an iterable
+        print(tls_feature)
+        return (True, tls_feature)
+    else:
+        return (False, None)
+
+
 def rep_cert(cert_obj):
     print(f"\nSubject: {cert_obj.subject}\n")
     print(f"Issuer: {cert_obj.issuer}\n")
