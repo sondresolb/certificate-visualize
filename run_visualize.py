@@ -3,6 +3,7 @@ from visualize_certificate import Cert_repr
 import visualize_tools as vis_tools
 import visualize_ocsp as vis_ocsp
 import visualize_crl as vis_crl
+import visualize_ct as vis_ct
 import visualize_exceptions as c_ex
 
 
@@ -11,7 +12,7 @@ def main():
     # run_stress_test()               # Run a stress test
 
     certificate_result = {}
-    domain = "www.github.com"
+    domain = "www.google.com"
 
     try:
         cert_chain = vis_tools.fetch_certificate_chain(domain)
@@ -39,35 +40,36 @@ def main():
         print(f"Chain validation for {domain} failed: {validation_res[1]}")
         print(f"Details: {validation_res[2]}")
 
-    # *CRL*
-    crl_status, crl_info = vis_crl.check_crl(end_cert, issuer_cert)
-    print(f"\nCert revoked in any CRL: {crl_status}, {crl_info}")
+    # # *CRL*
+    # crl_status, crl_result = vis_crl.check_crl(end_cert, issuer_cert)
+    # print(f"\nCert revoked in any CRL: {crl_status}, {crl_result}")
 
-    # *OCSP*
-    try:
-        ocsp_support, ocsp_results = vis_ocsp.check_ocsp(
-            end_cert, issuer_cert)
-        # print(f"\nOCSP support: {ocsp_support}\nOCSP result: {ocsp_results}")
-    except c_ex.OCSPRequestBuildError as orbe:
-        print(str(orbe))
+    # # *OCSP*
+    # try:
+    #     ocsp_support, ocsp_results = vis_ocsp.check_ocsp(
+    #         end_cert, issuer_cert)
+    #     print(f"\nOCSP support: {ocsp_support}\nOCSP result: {ocsp_results}")
+    # except c_ex.OCSPRequestBuildError as orbe:
+    #     print(str(orbe))
 
+    # *CT*
+    ct_support, ct_result = vis_ct.get_ct_information(end_cert)
+    print(f"\nCertificate transparency result:\n{ct_result}")
 
-def rep_cert(cert_obj):
-    print(f"\nSubject: {cert_obj.subject}\n")
-    print(f"Issuer: {cert_obj.issuer}\n")
-    print(f"Version: {cert_obj.version}\n")
-    print(f"Serial number: {cert_obj.serial_number}\n")
-    print(f"Signature algo: {cert_obj.signature_algorithm}\n")
-    print(f"Signature hash: {cert_obj.signature_hash}\n")
-    print(f"Expired: {cert_obj.has_expired}\n")
-    print(f"Validity period: {cert_obj.validity_period}\n")
-    print(f"Public key: {cert_obj.public_key}\n")
-    print(f"Fingerprint: {cert_obj.fingerprint}\n")
-    print("Extensions: ")
-    for ext in cert_obj.extensions.values():
-        print(
-            f"Name: {ext['name']}, Critical: {ext['critical']}, OID: {ext['OID']}")
-        print(f"{ext['value']}\n")
+    # *CAA*
+    # .....
+
+    # Check for CT poison extension
+    poison_res = vis_tools.has_ct_poison(end_cert)
+    print(f"\nIncludes CTPoison extension: {poison_res[0]}")
+
+    # Check for OCSP must staple extension
+    # If cryptography.x509.TLSFeature extension is embedded in certificate:
+    # The TLS Feature extension is defined in RFC 7633 and is used in certificates
+    # for OCSP Must-Staple. The object is iterable to get every element.
+    # This feature type is defined in RFC 6066 and, when embedded in an X.509 certificate,
+    # signals to the client that it should require a stapled OCSP response in the TLS handshake.
+    # Commonly known as OCSP Must-Staple in certificates.
 
 
 def run_stress_test():
@@ -110,18 +112,22 @@ def run_stress_test():
             print(f"Chain validation for {domain} failed: {validation_res[1]}")
             print(f"Details: {validation_res[2]}")
 
-        # CRL Checking
-        crl_status, crl_info = vis_crl.check_crl(end_cert, issuer_cert)
-        print(f"Cert revoked in CRL: {crl_status}, {crl_info}")
+        # # CRL Checking
+        # crl_status, crl_info = vis_crl.check_crl(end_cert, issuer_cert)
+        # print(f"Cert revoked in CRL: {crl_status}, {crl_info}")
 
-        # OCSP Checking
-        try:
-            ocsp_support, ocsp_results = vis_ocsp.check_ocsp(
-                end_cert, issuer_cert)
-            print(f"OCSP support: {ocsp_support}\nOCSP result: {ocsp_results}")
+        # # OCSP Checking
+        # try:
+        #     ocsp_support, ocsp_results = vis_ocsp.check_ocsp(
+        #         end_cert, issuer_cert)
+        #     print(f"OCSP support: {ocsp_support}\nOCSP result: {ocsp_results}")
 
-        except c_ex.OCSPRequestBuildError as orbe:
-            print(str(orbe))
+        # except c_ex.OCSPRequestBuildError as orbe:
+        #     print(str(orbe))
+
+        # *CT*
+        ct_result = vis_ct.get_ct_information(end_cert)
+        print(f"\nCertificate transparency result:\n{ct_result}")
 
         print("\n")
 
