@@ -20,7 +20,7 @@ from certvalidator import CertificateValidator, ValidationContext
 TRUST_STORE = None
 
 
-def fetch_certificate_chain(domain):
+def fetch_certificate_chain(domain, timeout=300):
     """Connect to a server and ask for certificate chain
 
     Takes in a domain which gets idna encoded, connects to the
@@ -50,7 +50,8 @@ def fetch_certificate_chain(domain):
 
     hostname = idna.encode(domain)
     # SSL.TLSv1_2_METHOD, SSL.SSLv23_METHOD
-    context = SSL.Context(SSL.SSLv23_METHOD)
+    context = SSL.Context(SSL.TLSv1_2_METHOD)
+    context.set_timeout(timeout)
     context.verify_mode = SSL.VERIFY_NONE
 
     print(f'Connecting to {domain} to get certificate chain...')
@@ -340,3 +341,46 @@ def sort_chain(cert_chain, domain):
         raise vis_ex.InvalidCertificateChain(
             f"Certificate chain for {domain} is not a correct chain:\n"
             f"{[(c.subject['commonName'], c.issuer['commonName']) for c in cert_chain]}")
+
+
+def has_ct_poison(end_cert):
+    """Check if a certificate includes the ctPoison extension
+
+    If a certificate includes the ctPoison extension, it should not
+    be used for any purposed carried out by a complete x509 certificate.
+    A certificate including this extension is a pre-certificate meant to
+    be issued to a certificate transparency log.
+
+    Args:
+        end_cert (Cert_repr): The certificate to check for extension in
+
+    Returns:
+        tuple(bool, extension or None):
+            The first element indicates if the certificate includes the
+            extension or not. The second element can contain the extension
+            itself or None if it is not present.
+
+    """
+    poison_ext = end_cert.extensions.get("ctPoison", None)
+    if poison_ext is not None:
+        return (True, poison_ext)
+    else:
+        return (False, None)
+
+
+def rep_cert(cert_obj):
+    print(f"\nSubject: {cert_obj.subject}\n")
+    print(f"Issuer: {cert_obj.issuer}\n")
+    print(f"Version: {cert_obj.version}\n")
+    print(f"Serial number: {cert_obj.serial_number}\n")
+    print(f"Signature algo: {cert_obj.signature_algorithm}\n")
+    print(f"Signature hash: {cert_obj.signature_hash}\n")
+    print(f"Expired: {cert_obj.has_expired}\n")
+    print(f"Validity period: {cert_obj.validity_period}\n")
+    print(f"Public key: {cert_obj.public_key}\n")
+    print(f"Fingerprint: {cert_obj.fingerprint}\n")
+    print("Extensions: ")
+    for ext in cert_obj.extensions.values():
+        print(
+            f"Name: {ext['name']}, Critical: {ext['critical']}, OID: {ext['OID']}")
+        print(f"{ext['value']}\n")

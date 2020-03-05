@@ -138,7 +138,8 @@ class Cert_repr:
 
                 except AttributeError:
                     if isinstance(ext, x509.UnrecognizedExtension):
-                        extensions.append(self.unrecognizedExtension(ext))
+                        extensions[ext.oid._name] = self.unrecognizedExtension(
+                            ext)
                     else:
                         print(f"Failed to parse extension: {ext.oid._name}")
 
@@ -344,7 +345,7 @@ class Cert_repr:
             sct = {}
             sct["version"] = item.version.name
             sct["log_id"] = item.log_id.hex()
-            sct["timestamp"] = item.timestamp.ctime()
+            sct["timestamp"] = item.timestamp
             sct["entry_type"] = item.entry_type.name
             extension_obj["value"].append(sct)
 
@@ -357,7 +358,8 @@ class Cert_repr:
         as a certificate for the purposes of validation, but is instead for
         submission to a certificate transparency log in order to obtain SCTs
         which will be embedded in a Precertificate SCTs extension on the
-        final certificate.
+        final certificate. This certificate is not safe to use for any purposes
+        carried out by a complete x509 certificate.
         """
         extension_obj = {}
         extension_obj["name"] = ext.oid._name
