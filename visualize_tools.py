@@ -91,7 +91,6 @@ def fetch_certificate_chain(domain, timeout=300):
             f"Error occured while getting certificates for {domain}: {type(e)}: {e}") from e
     finally:
         s.close()
-        conn.close()
 
 
 def fetch_intermediate_cert(end_cert):
