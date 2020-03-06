@@ -224,7 +224,6 @@ class Cert_repr:
 
         return extension_obj
 
-    # MUST BE TESTED
     @func_ref
     def TLSFeature(self, ext, me):
         """
@@ -236,15 +235,13 @@ class Cert_repr:
         extension_obj["critical"] = ext.critical
         extension_obj["doc"] = self.get_documentation(me)
         extension_obj["OID"] = ext.oid.dotted_string
-        extension_obj["value"] = {"must_staple": False}
+        extension_obj["value"] = []
 
         for item in ext.value:
-            if item.name == "status_request":
-                extension_obj["value"]["must_staple"] = True
+            extension_obj["value"].append(item.name)
 
         return extension_obj
 
-    # MUST BE TESTED
     @func_ref
     def nameConstraints(self, ext, me):
         """
@@ -259,8 +256,10 @@ class Cert_repr:
         extension_obj["OID"] = ext.oid.dotted_string
         extension_obj["value"] = {}
 
-        extension_obj["value"]["permitted_subtrees"] = ext.permitted_subtrees
-        extension_obj["value"]["excluded_subtrees"] = ext.excluded_subtrees
+        extension_obj["value"]["permitted_subtrees"] = [
+            val.value for val in ext.permitted_subtrees]
+        extension_obj["value"]["excluded_subtrees"] = [
+            val.value for val in ext.excluded_subtrees]
 
         return extension_obj
 
