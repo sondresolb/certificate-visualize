@@ -19,5 +19,4 @@ def check_caa(domain, end_cert):
         return (True, caa_records)
 
     except NoAnswer:
-        print(f"Did not find CAA record for domain {strip_domain}")
         return (False, None)

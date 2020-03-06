@@ -372,10 +372,27 @@ def has_ocsp_must_staple(end_cert):
     tls_feature = end_cert.extensions.get("TLSFeature", None)
     if tls_feature is not None:
         # It is an iterable
-        print(tls_feature)
+        # print(tls_feature)
         return (True, tls_feature)
     else:
         return (False, None)
+
+
+def get_certificate_type(end_cert):
+    policy_ext = end_cert.extensions.get("certificatePolicies", None)
+    if policy_ext is None:
+        return 'Not indicated'
+
+    if '2.23.140.1.2.3' in policy_ext["value"]:
+        return ('Individual-validated')
+    elif '2.23.140.1.2.1' in policy_ext["value"]:
+        return 'Domain-validated'
+    elif '2.23.140.1.2.2' in policy_ext["value"]:
+        return 'Organization-validated'
+    elif '2.23.140.1.1' in policy_ext["value"]:
+        return 'Extended-validation'
+    else:
+        return 'Not indicated'
 
 
 def rep_cert(cert_obj):

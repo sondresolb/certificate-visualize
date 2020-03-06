@@ -39,9 +39,10 @@ def check_ocsp(cert, issuer):
         issuer (cert_repr): The issuer of <cert>
 
     Returns:
-        tuple(bool, list): 
-            First element indicating if ocsp is supported. 
-            Second element is the list of results (dict) for
+        tuple(bool, bool, list): 
+            First element indicating if ocsp is supported.
+            Second element indicating if certificate is revoked.
+            Third element is the list of results (dict) for
             each enpoint found.
 
     Raises:
@@ -101,7 +102,9 @@ def check_ocsp(cert, issuer):
 
         ocsp_responses.append(endpoint_res)
 
-    return (True, ocsp_responses)
+    is_revoked = is_certificate_revoked(ocsp_responses)
+
+    return (True, is_revoked, ocsp_responses)
 
 
 def get_ocsp_response(host, ocsp_endpoint, req_encoded):
@@ -325,6 +328,14 @@ def validate_ocsp_responder(host):
         return (True, responder_cert_chain[0])
     else:
         return (False, f"{responder_validation[1]}: {responder_validation[2]}")
+
+
+def is_certificate_revoked(responses):
+    for response in responses:
+        if response["certificate_status"] == 'REVOKED':
+            return True
+    else:
+        return False
 
 
 def get_res_message(response_status):

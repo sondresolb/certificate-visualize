@@ -56,6 +56,8 @@ def get_ct_information(end_cert):
             state = next(iter(log_info["state"]))
             sct_info["state"] = (state, log_info["state"][state]["timestamp"])
             sct_info["timestamp"] = sct["timestamp"].ctime()
+            # Setting timestamp in extension to ctime
+            sct["timestamp"] = sct["timestamp"].ctime()
             sct_info["entry_type"] = sct["entry_type"]
             ct_information.append(sct_info)
 
