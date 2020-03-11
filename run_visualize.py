@@ -5,7 +5,7 @@ import visualize_ocsp as vis_ocsp
 import visualize_crl as vis_crl
 import visualize_ct as vis_ct
 import visualize_caa as vis_caa
-import visualize_connection as vis_con
+import visualize_connection as vis_conn
 import visualize_exceptions as c_ex
 
 
@@ -14,7 +14,7 @@ def main():
     # run_stress_test()               # Run a stress test
 
     certificate_result = {}
-    domain = "facebook.com"
+    domain = "www.cognite.com"
 
     try:
         cert_chain = vis_tools.fetch_certificate_chain(domain)
@@ -22,7 +22,7 @@ def main():
         issuer_cert = cert_chain[1]
 
         print(f"\nServed certificates: {len(cert_chain)}")
-        # vis_tools.rep_cert(end_cert)
+        vis_tools.rep_cert(end_cert)
     except c_ex.CertificateFetchingError as cfe:
         print(str(cfe))
         sys.exit()
@@ -71,6 +71,9 @@ def main():
     # poison_res = vis_tools.has_ct_poison(end_cert)
     # print(f"\nIncludes CTPoison extension: {poison_res[0]}")
 
+    # # Include check for ocsp staple data (improved privacy)
+    # # TODO: Create staple check
+
     # # Check for OCSP must-staple extension
     # ms_support, ms_ext = vis_tools.has_ocsp_must_staple(end_cert)
     # print(f"\nOCSP Must-staple support: {ms_support}\n{ms_ext}")
@@ -80,7 +83,18 @@ def main():
     # print(f"\nCertificate type: {certificate_type}")
 
     # Check server information
-    server_info = vis_con.get_server_information(domain)
+    server_info = vis_conn.get_server_information(domain)
+    print(f"\nServer IP: {server_info[0]}\n{server_info[1]}")
+
+    try:
+        cipher_result = vis_conn.get_cipher_support(server_info)
+        print(f"\nSupported ciphers:\n{cipher_result}")
+    except c_ex.CipherFetchingError as cfe:
+        print(str(cfe))
+
+    # # Check hsts
+    # hsts_support, hsts_result = vis_conn.check_hsts(domain)
+    # print(f"\nHSTS support: {hsts_support}\n{hsts_result}")
 
 
 def run_stress_test():
@@ -125,15 +139,18 @@ def run_stress_test():
 
         # *CRL*
         crl_status, crl_result = vis_crl.check_crl(end_cert, issuer_cert)
-        print(f"\n[CRL] Certificate revoked: {crl_status}\n{crl_result}")
+        crl_support = True if crl_status is not None else False
+        print(f"\nCRL support: {crl_support}, "
+              f"Certificate revoked: {crl_status}\n{crl_result}")
 
         # *OCSP*
         try:
-            ocsp_support, ocsp_results = vis_ocsp.check_ocsp(
+            ocsp_support, ocsp_revoked, ocsp_results = vis_ocsp.check_ocsp(
                 end_cert, issuer_cert)
-            print(f"\nOCSP support: {ocsp_support}\n{ocsp_results}")
+            print(f"\nOCSP support: {ocsp_support}, "
+                  f"Revoked: {ocsp_revoked}\n{ocsp_results}")
         except c_ex.OCSPRequestBuildError as orbe:
-            print(str(orbe))
+            print(f"\nFailed while building OCSP request: {str(orbe)}")
 
         # *CT*
         ct_support, ct_result = vis_ct.get_ct_information(end_cert)
@@ -147,12 +164,30 @@ def run_stress_test():
         poison_res = vis_tools.has_ct_poison(end_cert)
         print(f"\nIncludes CTPoison extension: {poison_res[0]}")
 
+        # Include check for ocsp staple data (improved privacy)
+        # TODO: Create staple check
+
         # Check for OCSP must-staple extension
         ms_support, ms_ext = vis_tools.has_ocsp_must_staple(end_cert)
         print(f"\nOCSP Must-staple support: {ms_support}\n{ms_ext}")
 
+        # Check certificate type
         certificate_type = vis_tools.get_certificate_type(end_cert)
         print(f"\nCertificate type: {certificate_type}")
+
+        # Check server information
+        server_info = vis_conn.get_server_information(domain)
+        print(f"\nServer IP: {server_info[0]}\n{server_info[1]}")
+
+        try:
+            cipher_result = vis_conn.get_cipher_support(server_info)
+            print(f"\nSupported ciphers:\n{cipher_result}")
+        except c_ex.CipherFetchingError as cfe:
+            print(str(cfe))
+
+        # Check hsts
+        hsts_support, hsts_result = vis_conn.check_hsts(domain)
+        print(f"\nHSTS support: {hsts_support}\n{hsts_result}")
 
         print("\n")
 
