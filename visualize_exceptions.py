@@ -14,6 +14,10 @@ class CertificateFetchingError(Exception):
     pass
 
 
+class CipherFetchingError(Exception):
+    pass
+
+
 class OCSPRequestBuildError(Exception):
     pass
 

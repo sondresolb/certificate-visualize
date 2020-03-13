@@ -148,7 +148,7 @@ def get_ocsp_response(host, ocsp_endpoint, req_encoded):
             f'response from {ocsp_endpoint}') from e
 
 
-def validate_ocsp_response(host, ocsp_response, issuer, cert_serial_number):
+def validate_ocsp_response(host, ocsp_response, issuer, cert_serial_number, hc=True):
     """Validation of the ocsp response
 
     A function for validating the ocsp response. All relevant information like
@@ -173,6 +173,7 @@ def validate_ocsp_response(host, ocsp_response, issuer, cert_serial_number):
         ocsp_response (cryptography ocsp object): The ocsp response
         issuer (cryptography x509 certificate): The issuer of the checked certificate
         cert_serial_number (int): Serial number of the checked certificate
+        hc/host check (bool): Validate certificate of responder
 
     Returns:
         validation_result (dict): Result of the validation
@@ -212,13 +213,14 @@ def validate_ocsp_response(host, ocsp_response, issuer, cert_serial_number):
             "OCSP this_update is greater than local system time")
 
     # Validate the OCSP responder certificate chain
-    validation_result["responder_cert"] = {"passed": True, "message": ""}
-    responder_valid, responder_res = validate_ocsp_responder(host)
-    if not responder_valid:
-        checks_passed = False
-        validation_result["responder_cert"]["passed"] = False
-        validation_result["responder_cert"]["message"] = (
-            f"OCSP responder certificate could not be validated: {responder_res}")
+    if hc:
+        validation_result["responder_cert"] = {"passed": True, "message": ""}
+        responder_valid, responder_res = validate_ocsp_responder(host)
+        if not responder_valid:
+            checks_passed = False
+            validation_result["responder_cert"]["passed"] = False
+            validation_result["responder_cert"]["message"] = (
+                f"OCSP responder certificate could not be validated: {responder_res}")
 
     # Check for certificate chain passed with response
     if ocsp_response.certificates:
@@ -311,7 +313,7 @@ def validate_ocsp_responder(host):
     """
     try:
         responder_cert_chain = [cert_obj.crypto_cert
-                                for cert_obj in vis_tools.fetch_certificate_chain(host)]
+                                for cert_obj in vis_tools.fetch_certificate_chain(host)[0]]
 
     except c_ex.CertificateFetchingError as cfe:
         return (False, str(cfe))
@@ -361,3 +363,13 @@ def get_res_message(response_status):
         return "The certificate being checked is not known to the OCSP responder"
     else:
         return "Uknown"
+
+
+def check_ocsp_staple(staple, issuer, end_cert):
+    if staple is None:
+        return (False, False)
+
+    result = validate_ocsp_response(None, staple, issuer,
+                                    end_cert.serial_number, hc=False)
+
+    return (True, result["valid"])
