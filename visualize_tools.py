@@ -9,8 +9,10 @@ from visualize_certificate import Cert_repr
 
 from OpenSSL import SSL, crypto
 
+from cryptography import x509
 from cryptography.hazmat.primitives.hashes import SHA256
 from cryptography.hazmat.primitives import asymmetric, serialization
+from cryptography.hazmat.backends import default_backend
 from cryptography.exceptions import InvalidSignature
 
 from certvalidator import errors as cert_errors
@@ -18,6 +20,16 @@ from certvalidator import CertificateValidator, ValidationContext
 
 
 TRUST_STORE = None
+
+
+def ocsp_callback(connection, ocsp_data, data):
+    try:
+        ocsp_staple = x509.ocsp.load_der_ocsp_response(ocsp_data)
+        data["ocsp_staple"] = ocsp_staple
+        return True
+    except ValueError:
+        data["ocsp_staple"] = None
+        return True
 
 
 def fetch_certificate_chain(domain, timeout=300):
@@ -47,12 +59,14 @@ def fetch_certificate_chain(domain, timeout=300):
             exception occured during the fetching.
     """
     certificates = []
+    conn_details = {}
 
     hostname = idna.encode(domain)
     # SSL.TLSv1_2_METHOD, SSL.SSLv23_METHOD
-    context = SSL.Context(SSL.TLSv1_2_METHOD)
+    context = SSL.Context(SSL.SSLv23_METHOD)
     context.set_timeout(timeout)
     context.verify_mode = SSL.VERIFY_NONE
+    context.set_ocsp_client_callback(ocsp_callback, data=conn_details)
 
     print(f'Connecting to {domain} to get certificate chain...')
 
@@ -63,8 +77,15 @@ def fetch_certificate_chain(domain, timeout=300):
         # Server name indicator support (SNI)
         conn.set_tlsext_host_name(hostname)
         conn.connect((hostname, 443))
+        ocsp_staple_data = conn.request_ocsp()
         conn.do_handshake()
         certificates = conn.get_peer_cert_chain()
+
+        # Connection details
+        conn_details["server_name"] = conn.get_servername().decode('utf-8')
+        conn_details["ip"] = s.getpeername()[0]
+        conn_details["protocol"] = conn.get_protocol_version_name()
+        conn_details["cipher"] = conn.get_cipher_name()
 
         if len(certificates) == 0:
             raise vis_ex.NoCertificatesError(
@@ -81,11 +102,11 @@ def fetch_certificate_chain(domain, timeout=300):
         except vis_ex.InvalidCertificateChain as icc:
             print(str(icc))
 
-        return cert_chain
+        return cert_chain, conn_details
 
     except vis_ex.IntermediateFetchingError as ife:
         print(f"Failed to fetch intermediate certificate: {str(ife)}")
-        return cert_chain
+        return cert_chain, conn_details
     except Exception as e:
         raise vis_ex.CertificateFetchingError(
             f"Error occured while getting certificates for {domain}: {type(e)}: {e}") from e
@@ -280,6 +301,40 @@ def set_trust_store():
     TRUST_STORE = [pem_cert.as_bytes() for pem_cert in pem_certs]
 
 
+def get_full_validation_path(validation_path):
+    parsed_list = []
+
+    try:
+        for v_cert in validation_path:
+            parsed_cert = Cert_repr(crypto.X509.from_cryptography(x509.load_der_x509_certificate(
+                v_cert.dump(), default_backend())))
+
+            info = {}
+            info["common_name"] = parsed_cert.subject["commonName"]
+            info["issuer"] = parsed_cert.issuer["commonName"]
+            info["validity_period"] = parsed_cert.validity_period
+            pub_key = f"{parsed_cert.public_key['type']} {parsed_cert.public_key['size']} bits"
+            info["public_key"] = pub_key
+            info["signature_algo"] = parsed_cert.signature_algorithm
+            info["serial_number"] = parsed_cert.serial_number
+            info["fingerprint_sha256"] = parsed_cert.fingerprint["SHA256"]
+            parsed_list.append(info)
+
+    except Exception as e:
+        print(f"Failed here {e}")
+        parsed_list.append("Failed to parse")
+
+    parsed_list.reverse()
+
+    cert_path = {
+        "end_cert": parsed_list[0],
+        "intermediates": parsed_list[1:-1],
+        "root": parsed_list[-1]
+    }
+
+    return cert_path
+
+
 def sort_chain(cert_chain, domain):
     """Sort certificate chain
 
@@ -361,22 +416,16 @@ def has_ct_poison(end_cert):
 
     """
     poison_ext = end_cert.extensions.get("ctPoison", None)
-    if poison_ext is not None:
-        return (True, poison_ext)
-    else:
-        return (False, None)
+    return poison_ext is not None
 
 
+# Checking if the TLSFeature extension is present
 def has_ocsp_must_staple(end_cert):
     tls_feature = end_cert.extensions.get("TLSFeature", None)
-    if tls_feature is not None:
-        # It is an iterable
-        # print(tls_feature)
-        return (True, tls_feature)
-    else:
-        return (False, None)
+    return tls_feature is not None
 
 
+# Checking policy oids for a match agains type oids
 def get_certificate_type(end_cert):
     policy_ext = end_cert.extensions.get("certificatePolicies", None)
     if policy_ext is None:
