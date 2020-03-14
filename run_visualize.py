@@ -14,7 +14,7 @@ def main():
     # run_stress_test()               # Run a stress test
 
     certificate_result = {}
-    domain = "vk.com"
+    domain = "www.ntnu.no"
 
     try:
         cert_chain, conn_details = vis_tools.fetch_certificate_chain(domain)
@@ -73,7 +73,7 @@ def main():
 
     # *CAA*
     caa_support, caa_result = vis_caa.check_caa(domain, end_cert)
-    print(f"\nCAA support: {caa_support}\n{caa_result}")
+    print(f"\nDNS CAA support: {caa_support}\n{caa_result}")
 
     # Check for CT poison extension
     poison_res = vis_tools.has_ct_poison(end_cert)
@@ -98,7 +98,7 @@ def main():
 
     # Check protocol and cipher support
     try:
-        proto_cipher_result = vis_conn.get_proto_cipher_support(
+        proto_cipher_result = vis_conn.get_supported_proto_ciphers(
             domain, conn_details["ip"])
         print(f"\nProto_ciphers:\n{proto_cipher_result}")
     except c_ex.CipherFetchingError as cfe:
@@ -137,69 +137,69 @@ def run_stress_test():
         except IndexError as ie:
             issuer_cert = None
 
-        # *Certificate path validation*
-        validation_res = vis_tools.validate_certificate_chain(
-            domain, [c.crypto_cert for c in cert_chain])
+        # # *Certificate path validation*
+        # validation_res = vis_tools.validate_certificate_chain(
+        #     domain, [c.crypto_cert for c in cert_chain])
 
-        if not validation_res[0]:
-            # This is a complete failure
-            print(f"Chain validation for {domain} failed: {validation_res[1]}")
-            print(f"Details: {validation_res[2]}")
+        # if not validation_res[0]:
+        #     # This is a complete failure
+        #     print(f"Chain validation for {domain} failed: {validation_res[1]}")
+        #     print(f"Details: {validation_res[2]}")
 
-        # Get full validation path structure
-        validation_path = vis_tools.get_full_validation_path(validation_res[1])
-        print("\nValidation path:")
-        for name, info in validation_path.items():
-            print(f"{name}:\n{info}\n")
+        # # Get full validation path structure
+        # validation_path = vis_tools.get_full_validation_path(validation_res[1])
+        # print("\nValidation path:")
+        # for name, info in validation_path.items():
+        #     print(f"{name}:\n{info}\n")
 
-        # *CRL*
-        crl_status, crl_result = vis_crl.check_crl(end_cert, issuer_cert)
-        crl_support = True if crl_status is not None else False
-        print(f"\nCRL support: {crl_support}, "
-              f"Certificate revoked: {crl_status}\n{crl_result}")
+        # # *CRL*
+        # crl_status, crl_result = vis_crl.check_crl(end_cert, issuer_cert)
+        # crl_support = True if crl_status is not None else False
+        # print(f"\nCRL support: {crl_support}, "
+        #       f"Certificate revoked: {crl_status}\n{crl_result}")
 
-        # *OCSP*
-        try:
-            ocsp_support, ocsp_revoked, ocsp_results = vis_ocsp.check_ocsp(
-                end_cert, issuer_cert)
-            print(f"\nOCSP support: {ocsp_support}, "
-                  f"Revoked: {ocsp_revoked}\n{ocsp_results}")
-        except c_ex.OCSPRequestBuildError as orbe:
-            print(f"\nFailed while building OCSP request: {str(orbe)}")
+        # # *OCSP*
+        # try:
+        #     ocsp_support, ocsp_revoked, ocsp_results = vis_ocsp.check_ocsp(
+        #         end_cert, issuer_cert)
+        #     print(f"\nOCSP support: {ocsp_support}, "
+        #           f"Revoked: {ocsp_revoked}\n{ocsp_results}")
+        # except c_ex.OCSPRequestBuildError as orbe:
+        #     print(f"\nFailed while building OCSP request: {str(orbe)}")
 
-        # *CT*
-        ct_support, ct_result = vis_ct.get_ct_information(end_cert)
-        print(f"\nCT support: {ct_support}\n{ct_result}")
+        # # *CT*
+        # ct_support, ct_result = vis_ct.get_ct_information(end_cert)
+        # print(f"\nCT support: {ct_support}\n{ct_result}")
 
-        # *CAA*
-        caa_support, caa_result = vis_caa.check_caa(domain, end_cert)
-        print(f"\nCAA support: {caa_support}\n{caa_result}")
+        # # *CAA*
+        # caa_support, caa_result = vis_caa.check_caa(domain, end_cert)
+        # print(f"\nCAA support: {caa_support}\n{caa_result}")
 
-        # Check for CT poison extension
-        poison_res = vis_tools.has_ct_poison(end_cert)
-        print(f"\nIncludes CTPoison extension: {poison_res}")
+        # # Check for CT poison extension
+        # poison_res = vis_tools.has_ct_poison(end_cert)
+        # print(f"\nIncludes CTPoison extension: {poison_res}")
 
-        # Check ocsp staple (improved privacy)
-        staple_support, valid_staple = vis_ocsp.check_ocsp_staple(
-            conn_details["ocsp_staple"], issuer_cert, end_cert)
-        print(
-            f"\nOCSP staple support: {staple_support}, Valid: {valid_staple}")
+        # # Check ocsp staple (improved privacy)
+        # staple_support, valid_staple = vis_ocsp.check_ocsp_staple(
+        #     conn_details["ocsp_staple"], issuer_cert, end_cert)
+        # print(
+        #     f"\nOCSP staple support: {staple_support}, Valid: {valid_staple}")
 
-        # Check for OCSP must-staple extension
-        ms_support = vis_tools.has_ocsp_must_staple(end_cert)
-        print(f"\nOCSP Must-staple support: {ms_support}")
+        # # Check for OCSP must-staple extension
+        # ms_support = vis_tools.has_ocsp_must_staple(end_cert)
+        # print(f"\nOCSP Must-staple support: {ms_support}")
 
-        # Check certificate type
-        certificate_type = vis_tools.get_certificate_type(end_cert)
-        print(f"\nCertificate type: {certificate_type}")
+        # # Check certificate type
+        # certificate_type = vis_tools.get_certificate_type(end_cert)
+        # print(f"\nCertificate type: {certificate_type}")
 
-        # Check HSTS
-        hsts_support = vis_conn.check_hsts(domain)
-        print(f"\nHSTS support: {hsts_support}")
+        # # Check HSTS
+        # hsts_support = vis_conn.check_hsts(domain)
+        # print(f"\nHSTS support: {hsts_support}")
 
         # Check protocol and cipher support
         try:
-            proto_cipher_result = vis_conn.get_proto_cipher_support(
+            proto_cipher_result = vis_conn.get_supported_proto_ciphers(
                 domain, conn_details["ip"])
             print(f"\nProto_ciphers:\n{proto_cipher_result}")
         except c_ex.CipherFetchingError as cfe:

@@ -2,6 +2,7 @@ import idna
 import subprocess
 from socket import socket
 from OpenSSL import SSL, crypto
+import visualize_ciphers as vis_ciphers
 import visualize_exceptions as vis_ex
 
 
@@ -46,7 +47,7 @@ def check_hsts(domain):
         return False
 
 
-def get_proto_cipher_support(domain, ip):
+def get_supported_proto_ciphers(domain, ip):
     """Determine enabled ciphers on server
 
     Function for determining the enabled ciphers for each
@@ -82,9 +83,10 @@ def get_proto_cipher_support(domain, ip):
         if info["supported"] and info["protocol"] in protocol_map:
             supported_protocols[info["protocol"]
                                 ] = protocol_map[info["protocol"]]
-            proto_cipher_support[info["protocol"]] = []
+            proto_cipher_support[info["protocol"]] = {}
 
     try:
+        cipher_info = vis_ciphers.get_cipher_suite_info()
         cipher_list = subprocess.run(
             ["openssl", "ciphers", "ALL:eNULL"], capture_output=True, text=True)
 
@@ -102,7 +104,9 @@ def get_proto_cipher_support(domain, ip):
                         call, timeout=3, capture_output=True, shell=True, text=True)
 
                     if proto_cipher.returncode == 0:
-                        proto_cipher_support[p_protocol].append(cipher)
+                        security = vis_ciphers.evaluate_cipher(
+                            cipher, cipher_info)
+                        proto_cipher_support[p_protocol][cipher] = security
 
                 except subprocess.TimeoutExpired:
                     pass
@@ -111,7 +115,7 @@ def get_proto_cipher_support(domain, ip):
 
     except Exception as e:
         raise vis_ex.CipherFetchingError(
-            "Failed to extract cipher list from OpenSSL") from e
+            "Failed while processing proto-cipher list") from e
 
 
 def get_connection_information(domain, timeout=300):
