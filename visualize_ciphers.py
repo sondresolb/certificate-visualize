@@ -20,7 +20,13 @@ def get_cipher_suite_info():
 
         for cipher_dict in complete_cipher_list:
             for _, val in cipher_dict.items():
-                cipher_info[val["openssl_name"]] = val["security"]
+                items = {}
+                items["security"] = val["security"]
+                items["kex_algorithm"] = val["kex_algorithm"]
+                items["auth_algorithm"] = val["auth_algorithm"]
+                items["enc_algorithm"] = val["enc_algorithm"]
+                items["hash_algorithm"] = val["hash_algorithm"]
+                cipher_info[val["openssl_name"]] = items
 
         return cipher_info
 

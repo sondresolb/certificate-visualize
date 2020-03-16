@@ -24,7 +24,7 @@ def main():
         print(f"\nConnection details: {conn_details}")
         print(f"\nCertificates served: {len(cert_chain)}")
 
-        # vis_tools.rep_cert(end_cert)
+        vis_tools.rep_cert(end_cert)
     except c_ex.CertificateFetchingError as cfe:
         print(str(cfe))
         sys.exit()
