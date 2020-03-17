@@ -309,19 +309,19 @@ def get_full_validation_path(validation_path):
             parsed_cert = Cert_repr(crypto.X509.from_cryptography(x509.load_der_x509_certificate(
                 v_cert.dump(), default_backend())))
 
-            info = {}
-            info["common_name"] = parsed_cert.subject["commonName"]
-            info["issuer"] = parsed_cert.issuer["commonName"]
-            info["validity_period"] = parsed_cert.validity_period
-            pub_key = f"{parsed_cert.public_key['type']} {parsed_cert.public_key['size']} bits"
-            info["public_key"] = pub_key
-            info["signature_algo"] = parsed_cert.signature_algorithm
-            info["serial_number"] = parsed_cert.serial_number
-            info["fingerprint_sha256"] = parsed_cert.fingerprint["SHA256"]
-            parsed_list.append(info)
+            # info = {}
+            # info["common_name"] = parsed_cert.subject["commonName"]
+            # info["issuer"] = parsed_cert.issuer["commonName"]
+            # info["validity_period"] = parsed_cert.validity_period
+            # pub_key = f"{parsed_cert.public_key['type']} {parsed_cert.public_key['size']} bits"
+            # info["public_key"] = pub_key
+            # info["signature_algo"] = parsed_cert.signature_algorithm
+            # info["serial_number"] = parsed_cert.serial_number
+            # info["fingerprint_sha256"] = parsed_cert.fingerprint["SHA256"]
+            # parsed_list.append(info)
+            parsed_list.append(parsed_cert)
 
     except Exception as e:
-        print(f"Failed here {e}")
         parsed_list.append("Failed to parse")
 
     parsed_list.reverse()
@@ -409,11 +409,7 @@ def has_ct_poison(end_cert):
         end_cert (Cert_repr): The certificate to check for extension in
 
     Returns:
-        tuple(bool, extension or None):
-            The first element indicates if the certificate includes the
-            extension or not. The second element can contain the extension
-            itself or None if it is not present.
-
+        (bool): Indicates if the extension is present or not
     """
     poison_ext = end_cert.extensions.get("ctPoison", None)
     return poison_ext is not None

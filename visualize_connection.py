@@ -65,6 +65,9 @@ def get_supported_proto_ciphers(domain, ip):
 
     Returns:
         proto_cipher_support (dict): Every cipher supported for each protocol
+
+    Raises:
+        vis_ex.CipherFetchingError: If an error occures during fetching
     """
     str_ip = str(ip)
     supported_protocols = {}
