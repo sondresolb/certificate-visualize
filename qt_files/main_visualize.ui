@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>802</width>
-    <height>433</height>
+    <width>868</width>
+    <height>466</height>
    </rect>
   </property>
   <property name="focusPolicy">
@@ -35,7 +35,7 @@
      </spacer>
     </item>
     <item>
-     <widget class="QLabel" name="label">
+     <widget class="QLabel" name="header_text_label">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
         <horstretch>0</horstretch>
@@ -96,7 +96,7 @@
      </spacer>
     </item>
     <item>
-     <widget class="QLabel" name="label_2">
+     <widget class="QLabel" name="sub_header_label">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
         <horstretch>0</horstretch>
@@ -143,7 +143,7 @@ Sondre Solbakken</string>
      </spacer>
     </item>
     <item>
-     <layout class="QHBoxLayout" name="horizontalLayout">
+     <layout class="QHBoxLayout" name="horizontalLayout_input_lineEdit">
       <property name="sizeConstraint">
        <enum>QLayout::SetMaximumSize</enum>
       </property>
@@ -167,7 +167,7 @@ Sondre Solbakken</string>
        </spacer>
       </item>
       <item>
-       <widget class="QLineEdit" name="lineEdit">
+       <widget class="QLineEdit" name="url_input_lineEdit">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
           <horstretch>0</horstretch>
@@ -247,7 +247,7 @@ Sondre Solbakken</string>
      </spacer>
     </item>
     <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_3">
+     <layout class="QHBoxLayout" name="horizontalLayout_progressBar">
       <property name="spacing">
        <number>0</number>
       </property>
@@ -258,7 +258,7 @@ Sondre Solbakken</string>
        <number>10</number>
       </property>
       <property name="bottomMargin">
-       <number>10</number>
+       <number>20</number>
       </property>
       <item>
        <widget class="QProgressBar" name="progressBar">
@@ -297,6 +297,16 @@ Sondre Solbakken</string>
      </layout>
     </item>
     <item>
+     <widget class="QLabel" name="progress_label">
+      <property name="text">
+       <string>None</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+    </item>
+    <item>
      <spacer name="verticalSpacer_4">
       <property name="orientation">
        <enum>Qt::Vertical</enum>
@@ -316,7 +326,7 @@ Sondre Solbakken</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>802</width>
+     <width>868</width>
      <height>22</height>
     </rect>
    </property>
@@ -324,5 +334,70 @@ Sondre Solbakken</string>
   <widget class="QStatusBar" name="statusbar"/>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>url_input_lineEdit</sender>
+   <signal>returnPressed()</signal>
+   <receiver>url_input_lineEdit</receiver>
+   <slot>clear()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>130</x>
+     <y>263</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>169</x>
+     <y>268</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>url_input_lineEdit</sender>
+   <signal>returnPressed()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>setFocus()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>199</x>
+     <y>259</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>245</x>
+     <y>188</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>url_input_lineEdit</sender>
+   <signal>returnPressed()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>hide()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>340</x>
+     <y>277</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>435</x>
+     <y>187</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>url_input_lineEdit</sender>
+   <signal>returnPressed()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>show()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>508</x>
+     <y>276</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>606</x>
+     <y>185</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>
