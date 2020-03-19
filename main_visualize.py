@@ -185,7 +185,6 @@ class Ui_MainWindow(QObject):
         domain_url = self.url_input_lineEdit.text()
         domain = domain_url.replace("http://", "")
 
-        # Switch out with running cert visualize
         try:
             res = run_visualize.certificate_scan(domain, self.progress_signal)
 
