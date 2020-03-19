@@ -8,6 +8,7 @@
 
 
 import run_visualize
+import visualize_exceptions as c_ex
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QObject, pyqtSignal
 
@@ -185,7 +186,12 @@ class Ui_MainWindow(QObject):
         domain = domain_url.replace("http://", "")
 
         # Switch out with running cert visualize
-        res = run_visualize.certificate_scan(domain, self.progress_signal)
+        try:
+            res = run_visualize.certificate_scan(domain, self.progress_signal)
+
+        except c_ex.ScanFailureError as sfe:
+            # Open popup window with failure
+            pass
 
         # Clean up MainWindow for next run
         MainWindow.hide()

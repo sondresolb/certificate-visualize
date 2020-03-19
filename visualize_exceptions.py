@@ -24,3 +24,7 @@ class OCSPRequestBuildError(Exception):
 
 class RequestResponseError(Exception):
     pass
+
+
+class ScanFailureError(Exception):
+    pass
