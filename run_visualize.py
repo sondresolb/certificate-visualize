@@ -9,14 +9,22 @@ import visualize_connection as vis_conn
 import visualize_exceptions as c_ex
 
 
-def main():
-    vis_tools.set_trust_store()     # Set custom trust store for validation
-    # run_stress_test()               # Run a stress test
+# Enables run without signal and fixes gui problem
+def signal_wrap(signal, percent, text):
+    try:
+        signal.emit(percent, text)
+    except Exception:
+        pass
 
+
+def certificate_scan(domain, signal):
+    signal_wrap(signal, 1, "initializing analysis...")
+
+    vis_tools.set_trust_store()     # Set custom trust store for validation
     scan_result = {}
-    domain = "www.ntnu.no"
 
     try:
+        signal_wrap(signal, 6, "fetching certificate chain")
         cert_chain, conn_details = vis_tools.fetch_certificate_chain(domain)
         end_cert = cert_chain[0]
         issuer_cert = cert_chain[1]
@@ -41,6 +49,7 @@ def main():
     except IndexError as ie:
         issuer_cert = None
 
+    signal_wrap(signal, 12, "validating certificate path")
     # *Certificate path validation*
     validation_res = vis_tools.validate_certificate_chain(
         domain, [c.crypto_cert for c in cert_chain])
@@ -56,6 +65,7 @@ def main():
             f"\nDetails: {validation_res[2]}"))
         print(scan_result["validation_path"][1])
 
+    signal_wrap(signal, 20, "processing CRL data")
     # *CRL*
     crl_revoked, crl_result = vis_crl.check_crl(end_cert, issuer_cert)
     crl_support = True if crl_revoked is not None else False
@@ -63,6 +73,7 @@ def main():
     print(f"\nCRL support: {crl_support}, "
           f"Certificate revoked: {crl_revoked}\n{crl_result}")
 
+    signal_wrap(signal, 30, "processing OCSP data")
     # *OCSP*
     try:
         ocsp_support, ocsp_revoked, ocsp_results = vis_ocsp.check_ocsp(
@@ -75,53 +86,65 @@ def main():
             False, False, f"\nFailed while building OCSP request: {str(orbe)}")
         print(f"\nFailed while building OCSP request: {str(orbe)}")
 
+    signal_wrap(signal, 40, "gathering CT information")
     # *CT*
     ct_support, ct_result = vis_ct.get_ct_information(end_cert)
     scan_result["ct"] = (ct_support, ct_result)
     print(f"\nCT support: {ct_support}\n{ct_result}")
 
+    signal_wrap(signal, 46, "querying for CAA record")
     # *CAA*
     caa_support, caa_result = vis_caa.check_caa(domain, end_cert)
     scan_result["caa"] = (caa_support, caa_result)
     print(f"\nDNS CAA support: {caa_support}\n{caa_result}")
 
+    signal_wrap(signal, 54, "checking for CT-poison extension")
     # *CT poison*
     poison_res = vis_tools.has_ct_poison(end_cert)
     scan_result["ct_poison"] = poison_res
     print(f"\nIncludes CTPoison extension: {poison_res}")
 
+    signal_wrap(signal, 60, "requesting OCSP-staple data")
     # *OCSP staple (improved privacy)*
     staple_support, valid_staple = vis_ocsp.check_ocsp_staple(
         conn_details["ocsp_staple"], issuer_cert, end_cert)
     scan_result["staple"] = (staple_support, valid_staple)
     print(f"\nOCSP staple support: {staple_support}, Valid: {valid_staple}")
 
+    signal_wrap(signal, 66, "checking for OCSP must-staple extension")
     # *OCSP must-staple*
     ms_support = vis_tools.has_ocsp_must_staple(end_cert)
     scan_result["must_staple"] = ms_support
     print(f"\nOCSP Must-staple support: {ms_support}")
 
+    signal_wrap(signal, 72, "determining certificate validation type")
     # *Certificate type*
     certificate_type = vis_tools.get_certificate_type(end_cert)
     scan_result["certificate_type"] = certificate_type
     print(f"\nCertificate type: {certificate_type}")
 
+    signal_wrap(signal, 78, "checking HSTS support")
     # *HSTS*
     hsts_support = vis_conn.check_hsts(domain)
     scan_result["hsts"] = hsts_support
     print(f"\nHSTS support: {hsts_support}")
 
+    signal_wrap(signal, 84, "probing protocol and cipher suite support")
     # *Protocol and cipher support*
     try:
         proto_cipher_result = vis_conn.get_supported_proto_ciphers(
-            domain, conn_details["ip"])
+            domain, conn_details["ip"], (signal, 84))
         scan_result["proto_cipher"] = (True, proto_cipher_result)
         print(f"\nProto_ciphers:\n{proto_cipher_result}")
     except c_ex.CipherFetchingError as cfe:
         scan_result["proto_cipher"] = (False, str(cfe))
         print(str(cfe))
 
-    print(scan_result)
+    signal_wrap(signal, 100, "analysis completed")
+    import time
+    time.sleep(1)
+
+    return scan_result
 
 
 def run_stress_test():
@@ -230,4 +253,5 @@ def run_stress_test():
 
 
 if __name__ == "__main__":
-    main()
+    domain = "www.ntnu.no"
+    certificate_scan(domain, None)

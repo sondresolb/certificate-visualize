@@ -7,7 +7,7 @@
 # WARNING! All changes made in this file will be lost!
 
 
-import test_run_pyqt
+import run_visualize
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QObject, pyqtSignal
 
@@ -34,7 +34,7 @@ class Ui_MainWindow(QObject):
         sizePolicy.setHeightForWidth(
             self.header_text_label.sizePolicy().hasHeightForWidth())
         self.header_text_label.setSizePolicy(sizePolicy)
-        self.header_text_label.setMaximumSize(QtCore.QSize(1677, 32))
+        self.header_text_label.setMaximumSize(QtCore.QSize(16777, 32))
         font = QtGui.QFont()
         font.setFamily("Ubuntu Light")
         font.setPointSize(18)
@@ -62,7 +62,7 @@ class Ui_MainWindow(QObject):
         sizePolicy.setHeightForWidth(
             self.sub_header_label.sizePolicy().hasHeightForWidth())
         self.sub_header_label.setSizePolicy(sizePolicy)
-        self.sub_header_label.setMaximumSize(QtCore.QSize(1677, 45))
+        self.sub_header_label.setMaximumSize(QtCore.QSize(16777, 45))
         font = QtGui.QFont()
         font.setItalic(True)
         self.sub_header_label.setFont(font)
@@ -185,7 +185,7 @@ class Ui_MainWindow(QObject):
         domain = domain_url.replace("http://", "")
 
         # Switch out with running cert visualize
-        test_run_pyqt.run_test(self.progress_signal)
+        res = run_visualize.certificate_scan(domain, self.progress_signal)
 
         # Clean up MainWindow for next run
         MainWindow.hide()

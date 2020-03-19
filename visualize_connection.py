@@ -47,7 +47,7 @@ def check_hsts(domain):
         return False
 
 
-def get_supported_proto_ciphers(domain, ip):
+def get_supported_proto_ciphers(domain, ip, progress_signal):
     """Determine enabled ciphers on server
 
     Function for determining the enabled ciphers for each
@@ -96,7 +96,14 @@ def get_supported_proto_ciphers(domain, ip):
         all_ciphers = cipher_list.stdout.split(":")
         all_ciphers[-1] = all_ciphers[-1].replace("\n", "")
 
+        signal, c_progress = progress_signal
+        progress_left = (100 - c_progress) - 1
+        progress_add = progress_left / len(supported_protocols)
         for p_protocol, o_protocol in supported_protocols.items():
+            c_progress += progress_add
+            signal_wrap(signal, c_progress,
+                        f"testing {p_protocol} cipher support")
+
             for cipher in all_ciphers:
                 try:
                     call = (
@@ -190,3 +197,10 @@ def get_connection_information(domain, timeout=300):
             s.close()
 
     return connection_info
+
+
+def signal_wrap(signal, percent, text):
+    try:
+        signal.emit(percent, text)
+    except Exception:
+        pass
