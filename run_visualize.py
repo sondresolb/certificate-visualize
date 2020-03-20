@@ -37,14 +37,14 @@ def certificate_scan(domain, signal):
 
         vis_tools.rep_cert(end_cert)
     except c_ex.CertificateFetchingError as cfe:
-        print(str(cfe))
-        raise(c_ex.ScanFailureError(str(cfe)))
+        cfe_msg = f"{str(cfe)}\n\nMake sure you typed the domain correctly"
+        raise(c_ex.CertificateFetchingError(cfe_msg))
     except c_ex.NoCertificatesError as nce:
         print(str(nce))
-        raise(c_ex.ScanFailureError(str(nce)))
+        raise(c_ex.NoCertificatesError(str(nce)))
     except c_ex.InvalidCertificateChain as icc:
         print(str(icc))
-        raise(c_ex.ScanFailureError(str(icc)))
+        raise(c_ex.InvalidCertificateChain(str(icc)))
     except IndexError as ie:
         issuer_cert = None
 

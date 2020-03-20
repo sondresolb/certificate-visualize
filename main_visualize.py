@@ -1,16 +1,9 @@
-# -*- coding: utf-8 -*-
-
-# Form implementation generated from reading ui file 'main_visualize.ui'
-#
-# Created by: PyQt5 UI code generator 5.14.1
-#
-# WARNING! All changes made in this file will be lost!
-
-
 import run_visualize
 import visualize_exceptions as c_ex
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QObject, pyqtSignal
+from display_window import Ui_MainDisplay
+from exception_dialog import Ui_ExceptionDialog
 
 
 class Ui_MainWindow(QObject):
@@ -186,22 +179,35 @@ class Ui_MainWindow(QObject):
         domain = domain_url.replace("http://", "")
 
         try:
+
             res = run_visualize.certificate_scan(domain, self.progress_signal)
 
-        except c_ex.ScanFailureError as sfe:
+        except Exception as e:
             # Open popup window with failure
-            pass
+            # TODO: Write better exception format with type of ex
+            error_msg = f"Type: {type(e)}\n\n{str(e)}"
+            self.ExceptionDialog = QtWidgets.QDialog()
+            self.ex_ui = Ui_ExceptionDialog()
+            self.ex_ui.setupUi(self.ExceptionDialog, error_msg)
+            self.ExceptionDialog.show()
 
-        # Clean up MainWindow for next run
-        MainWindow.hide()
+            self.clean_main_window()
+            self.url_input_lineEdit.setEnabled(True)
+            return
+
+        # Open display window (taking output from last run)
+        self.DisplayWindow = QtWidgets.QMainWindow()
+        self.ui = Ui_MainDisplay()
+        self.ui.setupUi(self.DisplayWindow)
+        self.DisplayWindow.show()
+
+        self.clean_main_window()
+        self.url_input_lineEdit.setEnabled(True)
+
+    def clean_main_window(self):
         self.progress_label.hide()
         self.url_input_lineEdit.clear()
         self.progressBar.setValue(0)
-
-        # Open display window (taking output from last run)
-
-        MainWindow.show()
-        self.url_input_lineEdit.setEnabled(True)
 
 
 if __name__ == "__main__":
