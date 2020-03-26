@@ -1,8 +1,9 @@
 import run_visualize
+import data_translation as dt
 import visualize_exceptions as c_ex
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QObject, pyqtSignal
-from display_window import Ui_MainDisplay
+from display_window import Ui_Form
 from exception_dialog import Ui_ExceptionDialog
 
 
@@ -195,11 +196,29 @@ class Ui_MainWindow(QObject):
             self.url_input_lineEdit.setEnabled(True)
             return
 
-        # Open display window (taking output from last run)
-        self.DisplayWindow = QtWidgets.QMainWindow()
-        self.ui = Ui_MainDisplay()
-        self.ui.setupUi(self.DisplayWindow)
-        self.DisplayWindow.show()
+        # Initilize display window (taking output from last run)
+        self.Form = QtWidgets.QWidget()
+        self.ui = Ui_Form()
+        self.ui.setupUi(self.Form)
+
+        # Do data translation for all windows in display
+        # Connection details window
+        connection_details = dt.translate_connection_details(res)
+        # TODO: Fill connection details from here by calling it in dt
+        # dt.fill_connection_details(self.ui.connection_details, connection_details)
+        self.ui.fill_connection_details(connection_details)
+
+        # Main information window (Certificate path)
+        validation_res, cert_path = res["validation_path"]
+        if validation_res:
+            certificate_path = dt.translate_certificate_path(cert_path)
+        else:
+            # Call seperate function for displaying validation failure
+            # with the error message. Done in display window
+            pass
+
+        # Open display window
+        self.Form.show()
 
         self.clean_main_window()
         self.url_input_lineEdit.setEnabled(True)
