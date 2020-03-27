@@ -204,14 +204,17 @@ class Ui_MainWindow(QObject):
         # Do data translation for all windows in display
         # Connection details window
         connection_details = dt.translate_connection_details(res)
-        # TODO: Fill connection details from here by calling it in dt
-        # dt.fill_connection_details(self.ui.connection_details, connection_details)
-        self.ui.fill_connection_details(connection_details)
+        dt.fill_connection_details(
+            self.ui.connection_details, connection_details)
 
         # Main information window (Certificate path)
         validation_res, cert_path = res["validation_path"]
         if validation_res:
             certificate_path = dt.translate_certificate_path(cert_path)
+            data_model = dt.create_data_model(self.ui, self.Form)
+            dt.fill_data_model(
+                data_model.invisibleRootItem(), certificate_path)
+
         else:
             # Call seperate function for displaying validation failure
             # with the error message. Done in display window

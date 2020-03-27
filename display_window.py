@@ -196,12 +196,3 @@ class Ui_Form(object):
         __sortingEnabled = self.connection_details.isSortingEnabled()
         self.connection_details.setSortingEnabled(False)
         self.connection_details.setSortingEnabled(__sortingEnabled)
-
-    def fill_connection_details(self, data):
-        _translate = QtCore.QCoreApplication.translate
-
-        for index, key in enumerate(data):
-            item = QtWidgets.QTableWidgetItem()
-            self.connection_details.setItem(index, 0, item)
-            item = self.connection_details.item(index, 0)
-            item.setText(_translate("Form", str(data[key])))
