@@ -42,10 +42,11 @@ def translate_connection_details(scan_result):
 def translate_certificate_path(cert_path):
     new_path = {}
 
-    new_path["end_cert"] = stringify_certificate(cert_path["end_cert"])
-    new_path["intermediates"] = [stringify_certificate(
+    new_path["End-user Certificate"] = stringify_certificate(
+        cert_path["end_cert"])
+    new_path["Intermediate Certificates"] = [stringify_certificate(
         cert) for cert in cert_path["intermediates"]]
-    new_path["root"] = stringify_certificate(cert_path["root"])
+    new_path["Root Certificate"] = stringify_certificate(cert_path["root"])
 
     return new_path
 
@@ -54,7 +55,6 @@ def stringify_certificate(cert):
     certificate = {}
     certificate["subject"] = cert.subject
     certificate["issuer"] = cert.issuer
-    certificate["version"] = str(cert.version)
     certificate["serial_number"] = str(cert.serial_number)
     certificate["fingerprint"] = {
         "SHA1": str(cert.fingerprint["SHA1"]),
@@ -63,16 +63,18 @@ def stringify_certificate(cert):
     certificate["signature_hash"] = {
         "name": str(cert.signature_hash[0]),
         "bits": str(cert.signature_hash[1])}
+    certificate["version"] = str(cert.version)
     certificate["expired"] = str(cert.has_expired)
     certificate["validity_period"] = {
         "not_before": str(cert.validity_period[0]),
-        "not_after": str(cert.validity_period[1])}
+        "not_after": cert.validity_period[1]}
+    certificate["certificate_type"] = cert.certificate_type
 
     # Public keys
     if cert.public_key["type"] == 'RSA':
         certificate["public_key"] = {
             "type": cert.public_key["type"],
-            "bit_size": str(cert.public_key["size"]),
+            "size": str(cert.public_key["size"]),
             "exponent": str(cert.public_key["exponent"]),
             "modulus": str(cert.public_key["modulus"])
         }
@@ -216,6 +218,36 @@ def subject_layout(value, item_list):
 
 def issuer_layout(value, item_list):
     return QStandardItem(value["commonName"])
+
+
+def signature_hash_layout(value, item_list):
+    return QStandardItem(f"{value['name']} ({value['bits']})")
+
+
+def validity_period_layout(value, item_list):
+    msg = f"Certificate expires ({value['not_after']})"
+    return QStandardItem(msg)
+
+
+def expired_layout(value, item_list):
+    msg = "Yes" if value == "True" else "No"
+    item_list[1].setText(msg)
+
+
+def fingerprint_layout(value, item_list):
+    msg = f"{value['SHA1']} (sha1)"
+    return QStandardItem(msg)
+
+
+def public_key_layout(value, item_list):
+    if value['type'] == 'RSA':
+        return QStandardItem(f"{value['type']} {value['size']} ({value['exponent']})")
+    elif value['type'] == 'DSA':
+        return QStandardItem(f"{value['type']} ({value['size']})")
+    elif value['type'] == 'EllipticCurve':
+        return QStandardItem(f"{value['type']} {value['size']} ({value['curve']})")
+    else:
+        return QStandardItem(f"{value['type']} {value['hash']} ({value['curve']})")
 
 
 def end_cert_layout(value, item_list):

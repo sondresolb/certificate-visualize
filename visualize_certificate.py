@@ -29,6 +29,7 @@ class Cert_repr:
         self.public_key = None
         self.extensions = None
         self.fingerprint = None
+        self.certificate_type = None
         self.initilize_cert()
 
     def initilize_cert(self):
@@ -44,6 +45,7 @@ class Cert_repr:
         self.public_key = self.set_public_key()
         self.extensions = self.set_extensions()
         self.fingerprint = self.set_fingerprint()
+        self.certificate_type = self.set_certificate_type()
 
     # Distinguished Name from x.509.Name object as a dict
     def set_dn(self, cert_name):
@@ -126,6 +128,23 @@ class Cert_repr:
             hashes.SHA256()).hex()
 
         return fingerprint
+
+    # Checking policy oids for a match agains type oids
+    def set_certificate_type(self):
+        policy_ext = self.extensions.get("certificatePolicies", None)
+        if policy_ext is None:
+            return 'Not indicated'
+
+        if '2.23.140.1.2.3' in policy_ext["value"]:
+            return 'Individual-validated'
+        elif '2.23.140.1.2.1' in policy_ext["value"]:
+            return 'Domain-validated'
+        elif '2.23.140.1.2.2' in policy_ext["value"]:
+            return 'Organization-validated'
+        elif '2.23.140.1.1' in policy_ext["value"]:
+            return 'Extended-validation'
+        else:
+            return 'Not indicated'
 
     def set_extensions(self):
         extensions = {}
@@ -390,7 +409,7 @@ class Cert_repr:
     def authorityInfoAccess(self, ext, me):
         """
         The authority information access extension indicates how to access
-        information and services for the issuer of the certificate in which
+        information and services from the issuer of the certificate in which
         the extension appears. Information and services may include online
         validation services (such as OCSP) and issuer data.
         """

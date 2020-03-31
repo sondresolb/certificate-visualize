@@ -116,19 +116,16 @@ def certificate_scan(domain, signal):
     scan_result["must_staple"] = ms_support
     print(f"\nOCSP Must-staple support: {ms_support}")
 
-    signal_wrap(signal, 72, "determining certificate validation type")
     # *Certificate type*
-    certificate_type = vis_tools.get_certificate_type(end_cert)
-    scan_result["certificate_type"] = certificate_type
-    print(f"\nCertificate type: {certificate_type}")
+    print(f"\nEnd-Certificate type: {end_cert.certificate_type}")
 
-    signal_wrap(signal, 78, "checking HSTS support")
+    signal_wrap(signal, 72, "checking HSTS support")
     # *HSTS*
     hsts_support = vis_conn.check_hsts(domain)
     scan_result["hsts"] = hsts_support
     print(f"\nHSTS support: {hsts_support}")
 
-    signal_wrap(signal, 84, "probing protocol and cipher suite support")
+    signal_wrap(signal, 84, "analysing protocol and cipher-suite support")
     # *Protocol and cipher support*
     try:
         proto_cipher_result = vis_conn.get_supported_proto_ciphers(

@@ -12,8 +12,11 @@ class Ui_MainWindow(QObject):
 
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(868, 466)
+        MainWindow.resize(815, 405)
         MainWindow.setFocusPolicy(QtCore.Qt.StrongFocus)
+
+        MainWindow.setMinimumSize(QtCore.QSize(405, 410))
+
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.verticalLayout = QtWidgets.QVBoxLayout(self.centralwidget)
@@ -211,13 +214,15 @@ class Ui_MainWindow(QObject):
         validation_res, cert_path = res["validation_path"]
         if validation_res:
             certificate_path = dt.translate_certificate_path(cert_path)
+            certificate_path = {"Validation path": certificate_path}
             data_model = dt.create_data_model(self.ui, self.Form)
             dt.fill_data_model(
                 data_model.invisibleRootItem(), certificate_path)
 
         else:
             # Call seperate function for displaying validation failure
-            # with the error message. Done in display window
+            # with the error message. Parse and display only end-cert
+            # and issuer
             pass
 
         # Open display window
