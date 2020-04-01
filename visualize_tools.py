@@ -397,30 +397,6 @@ def sort_chain(cert_chain, domain):
             f"{[(c.subject['commonName'], c.issuer['commonName']) for c in cert_chain]}")
 
 
-def has_ct_poison(end_cert):
-    """Check if a certificate includes the ctPoison extension
-
-    If a certificate includes the ctPoison extension, it should not
-    be used for any purposed carried out by a complete x509 certificate.
-    A certificate including this extension is a pre-certificate meant to
-    be issued to a certificate transparency log.
-
-    Args:
-        end_cert (Cert_repr): The certificate to check for extension in
-
-    Returns:
-        (bool): Indicates if the extension is present or not
-    """
-    poison_ext = end_cert.extensions.get("ctPoison", None)
-    return poison_ext is not None
-
-
-# Checking if the TLSFeature extension is present
-def has_ocsp_must_staple(end_cert):
-    tls_feature = end_cert.extensions.get("TLSFeature", None)
-    return tls_feature is not None
-
-
 def rep_cert(cert_obj):
     print(f"\nSubject: {cert_obj.subject}\n")
     print(f"Issuer: {cert_obj.issuer}\n")

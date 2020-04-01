@@ -30,6 +30,8 @@ class Cert_repr:
         self.extensions = None
         self.fingerprint = None
         self.certificate_type = None
+        self.must_staple = None
+        self.ct_poison = None
         self.initilize_cert()
 
     def initilize_cert(self):
@@ -46,6 +48,8 @@ class Cert_repr:
         self.extensions = self.set_extensions()
         self.fingerprint = self.set_fingerprint()
         self.certificate_type = self.set_certificate_type()
+        self.must_staple = self.set_ocsp_must_staple()
+        self.ct_poison = self.set_ct_poison()
 
     # Distinguished Name from x.509.Name object as a dict
     def set_dn(self, cert_name):
@@ -145,6 +149,28 @@ class Cert_repr:
             return 'Extended-validation'
         else:
             return 'Not indicated'
+
+    # Checking if the TLSFeature extension is present
+    def set_ocsp_must_staple(self):
+        tls_feature = self.extensions.get("TLSFeature", None)
+        return tls_feature is not None
+
+    def set_ct_poison(self):
+        """Check if a certificate includes the ctPoison extension
+
+        If a certificate includes the ctPoison extension, it should not
+        be used for any purposed carried out by a complete x509 certificate.
+        A certificate including this extension is a pre-certificate meant to
+        be issued to a certificate transparency log.
+
+        Args:
+            self (Cert_repr): The certificate to check for extension in
+
+        Returns:
+            (bool): Indicates if the extension is present or not
+        """
+        poison_ext = self.extensions.get("ctPoison", None)
+        return poison_ext is not None
 
     def set_extensions(self):
         extensions = {}

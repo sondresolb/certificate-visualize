@@ -48,7 +48,7 @@ def translate_certificate_path(cert_path):
         cert) for cert in cert_path["intermediates"]]
     new_path["Root Certificate"] = stringify_certificate(cert_path["root"])
 
-    return new_path
+    return {"Validation path": new_path}
 
 
 def stringify_certificate(cert):
@@ -65,6 +65,8 @@ def stringify_certificate(cert):
         "bits": str(cert.signature_hash[1])}
     certificate["version"] = str(cert.version)
     certificate["expired"] = str(cert.has_expired)
+    certificate["ct_poison"] = str(cert.ct_poison)
+    certificate["must_staple"] = str(cert.must_staple)
     certificate["validity_period"] = {
         "not_before": str(cert.validity_period[0]),
         "not_after": cert.validity_period[1]}
@@ -113,6 +115,35 @@ def stringify_certificate(cert):
     return certificate
 
 
+def translate_certificate_transparency(ct_data):
+    data = []
+
+    try:
+        for item in data:
+            sct_item = {}
+            sct_item["version"] = item["version"]
+            sct_item["valid"] = item["valid"]
+            sct_item["submitted"] = item["timestamp"]
+            sct_item["entry_type"] = item["entry_type"]
+
+            log_item = {}
+            log_item["name"] = item["description"]
+            log_item["operator"] = item["operator"]
+            log_item["state"] = {"status": item["state"]
+                                 [0], "timestamp": item["state"][1]}
+            log_item["id"] = item["log_id"]
+            log_item["mmd"] = item["mmd"]
+            log_item["email"] = item["email"]
+            log_item["url"] = item["url"]
+
+            data.append({"sct": sct_item, "log": log_item})
+
+        return {"Certificate Transparency": stringify_extension_value(data)}
+
+    except Exception as e:
+        print(str(e))
+
+
 def stringify_extension_value(extension_value):
     value_type = type(extension_value)
 
@@ -152,21 +183,21 @@ def create_data_model(display, parent):
     data_model = QStandardItemModel(0, 2, parent)
     data_model.setHeaderData(0, Qt.Horizontal, "Name")
     data_model.setHeaderData(1, Qt.Horizontal, "Value")
-    display.cert_chain_treeView.setModel(data_model)
+    display.data_view.setModel(data_model)
     return data_model
 
 
-def fill_data_model(parent, cert_path):
-    value_type = type(cert_path)
+def fill_data_model(parent, data):
+    value_type = type(data)
 
     if value_type is dict:
 
-        for key, value in cert_path.items():
+        for key, value in data.items():
             custom_row(parent, key, value)
 
     elif value_type is list:
 
-        for index, value in enumerate(cert_path):
+        for index, value in enumerate(data):
             key = index
             custom_row(parent, key, value)
 
@@ -186,28 +217,25 @@ def custom_item_layout(parent, key, value, is_string):
     if is_string:
         item = [QStandardItem(str(key)), QStandardItem(value)]
     else:
-        item = [QStandardItem(str(key))]
+        item = [QStandardItem(str(key)), QStandardItem()]
 
     fn_name = f"{key}_layout"
     try:
         module = __import__('data_translation')
         layout_function = getattr(module, fn_name)
-        if layout_function is not None:
-            fn_result = layout_function(value, item)
-            if fn_result is not None:
-                item.append(fn_result)
+        fn_result = layout_function(value, item)
+        if fn_result is not None:
+            item[1] = fn_result
 
         return item
 
     except Exception as e:
-        # Possibly remove index from tree
-        # if type(key) is int:
-        #     remove index here if parent == something
+        # Possibly remove index from tree here
 
         if parent.text() == "extensions":
             item[0].setToolTip(textwrap.fill(value["description"], 50))
             extension_item = extension_layout(value, item)
-            item.append(extension_item)
+            item[1] = extension_item
 
         return item
 
@@ -237,6 +265,14 @@ def expired_layout(value, item_list):
 def fingerprint_layout(value, item_list):
     msg = f"{value['SHA1']} (sha1)"
     return QStandardItem(msg)
+
+
+def must_staple_layout(value, item_list):
+    return QStandardItem("Yes") if value == 'True' else QStandardItem("No")
+
+
+def ct_poison_layout(value, item_list):
+    return QStandardItem("Yes") if value == 'True' else QStandardItem("No")
 
 
 def public_key_layout(value, item_list):

@@ -97,11 +97,8 @@ def certificate_scan(domain, signal):
     scan_result["caa"] = (caa_support, caa_result)
     print(f"\nDNS CAA support: {caa_support}\n{caa_result}")
 
-    signal_wrap(signal, 54, "checking for CT-poison extension")
     # *CT poison*
-    poison_res = vis_tools.has_ct_poison(end_cert)
-    scan_result["ct_poison"] = poison_res
-    print(f"\nIncludes CTPoison extension: {poison_res}")
+    print(f"\nIncludes CTPoison extension: {end_cert.ct_poison}")
 
     signal_wrap(signal, 60, "requesting OCSP-staple data")
     # *OCSP staple (improved privacy)*
@@ -110,11 +107,8 @@ def certificate_scan(domain, signal):
     scan_result["staple"] = (staple_support, valid_staple)
     print(f"\nOCSP staple support: {staple_support}, Valid: {valid_staple}")
 
-    signal_wrap(signal, 66, "checking for OCSP must-staple extension")
     # *OCSP must-staple*
-    ms_support = vis_tools.has_ocsp_must_staple(end_cert)
-    scan_result["must_staple"] = ms_support
-    print(f"\nOCSP Must-staple support: {ms_support}")
+    print(f"\nOCSP Must-staple support: {end_cert.must_staple}")
 
     # *Certificate type*
     print(f"\nEnd-Certificate type: {end_cert.certificate_type}")

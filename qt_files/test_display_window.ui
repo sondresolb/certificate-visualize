@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>865</width>
+    <width>985</width>
     <height>703</height>
    </rect>
   </property>
@@ -74,8 +74,26 @@
         <height>0</height>
        </size>
       </property>
+      <property name="sizeAdjustPolicy">
+       <enum>QAbstractScrollArea::AdjustToContents</enum>
+      </property>
+      <property name="editTriggers">
+       <set>QAbstractItemView::NoEditTriggers</set>
+      </property>
+      <property name="alternatingRowColors">
+       <bool>true</bool>
+      </property>
+      <property name="animated">
+       <bool>true</bool>
+      </property>
+      <attribute name="headerCascadingSectionResizes">
+       <bool>true</bool>
+      </attribute>
+      <attribute name="headerDefaultSectionSize">
+       <number>280</number>
+      </attribute>
      </widget>
-     <widget class="QWidget" name="">
+     <widget class="QWidget" name="layoutWidget">
       <layout class="QVBoxLayout" name="verticalLayout">
        <property name="sizeConstraint">
         <enum>QLayout::SetDefaultConstraint</enum>
@@ -95,6 +113,7 @@
           <widget class="QLabel" name="score_name">
            <property name="font">
             <font>
+             <family>Tlwg Typo</family>
              <pointsize>28</pointsize>
             </font>
            </property>
@@ -129,8 +148,8 @@
           <widget class="QLabel" name="score">
            <property name="font">
             <font>
-             <family>Ubuntu Mono</family>
-             <pointsize>32</pointsize>
+             <family>Tlwg Typo</family>
+             <pointsize>28</pointsize>
              <weight>50</weight>
              <italic>false</italic>
              <bold>false</bold>
@@ -164,9 +183,12 @@
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
            </property>
+           <property name="sizeType">
+            <enum>QSizePolicy::Expanding</enum>
+           </property>
            <property name="sizeHint" stdset="0">
             <size>
-             <width>40</width>
+             <width>0</width>
              <height>20</height>
             </size>
            </property>
@@ -252,45 +274,77 @@
            <property name="text">
             <string>IP</string>
            </property>
+           <property name="toolTip">
+            <string>Server IP address</string>
+           </property>
           </row>
           <row>
            <property name="text">
             <string>SN</string>
+           </property>
+           <property name="toolTip">
+            <string>Server Name</string>
            </property>
           </row>
           <row>
            <property name="text">
             <string>TLS Version</string>
            </property>
+           <property name="toolTip">
+            <string>Transport Layer Security
+ versions supported by server</string>
+           </property>
           </row>
           <row>
            <property name="text">
             <string>Protocol</string>
+           </property>
+           <property name="toolTip">
+            <string>Protocol used for secure
+ transmission of certificate data</string>
            </property>
           </row>
           <row>
            <property name="text">
             <string>Cipher Suite</string>
            </property>
+           <property name="toolTip">
+            <string>Cipher Suite used for
+ securing connection</string>
+           </property>
           </row>
           <row>
            <property name="text">
             <string>HSTS</string>
+           </property>
+           <property name="toolTip">
+            <string>HTTP Strict Transport Security support</string>
            </property>
           </row>
           <row>
            <property name="text">
             <string>OCSP-Stapling</string>
            </property>
+           <property name="toolTip">
+            <string>Online Certificate Status
+ Protocol stapling support</string>
+           </property>
           </row>
           <row>
            <property name="text">
             <string>DNS CAA</string>
            </property>
+           <property name="toolTip">
+            <string>Domain Name System Certificate
+ Authority Authorization support</string>
+           </property>
           </row>
           <row>
            <property name="text">
             <string>Certificates</string>
+           </property>
+           <property name="toolTip">
+            <string>Number of certificates provided by server</string>
            </property>
           </row>
           <column>
@@ -298,6 +352,14 @@
             <string>Details</string>
            </property>
           </column>
+          <item row="0" column="0">
+           <property name="text">
+            <string/>
+           </property>
+           <property name="toolTip">
+            <string/>
+           </property>
+          </item>
          </widget>
         </widget>
        </item>

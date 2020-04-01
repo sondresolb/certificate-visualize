@@ -3,7 +3,8 @@ import data_translation as dt
 import visualize_exceptions as c_ex
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QObject, pyqtSignal
-from display_window import Ui_Form
+# from display_window import Ui_Form
+from experiment_window import Ui_Form
 from exception_dialog import Ui_ExceptionDialog
 
 
@@ -210,12 +211,12 @@ class Ui_MainWindow(QObject):
         dt.fill_connection_details(
             self.ui.connection_details, connection_details)
 
+        data_model = dt.create_data_model(self.ui, self.Form)
+
         # Main information window (Certificate path)
         validation_res, cert_path = res["validation_path"]
         if validation_res:
             certificate_path = dt.translate_certificate_path(cert_path)
-            certificate_path = {"Validation path": certificate_path}
-            data_model = dt.create_data_model(self.ui, self.Form)
             dt.fill_data_model(
                 data_model.invisibleRootItem(), certificate_path)
 
@@ -224,6 +225,41 @@ class Ui_MainWindow(QObject):
             # with the error message. Parse and display only end-cert
             # and issuer
             pass
+
+        # Main information window (CRL)
+        # crl_support, crl_data = res["crl"]
+        # if crl_support:
+        #     pass
+
+        # else:
+        #     # One row with second value (not supported)
+        #     pass
+
+        # Main information window (OCSP)
+        # ocsp_support, ocsp_data = res["ocsp"]
+
+        # Main information window (CT)
+        ct_support, ct_data = res["ct"]
+        if ct_support:
+            translated_ct = dt.translate_certificate_transparency(ct_data)
+            print(translated_ct)
+            dt.fill_data_model(data_model.invisibleRootItem(), translated_ct)
+        else:
+            # single item with not supported
+            pass
+
+        # Main information window (CAA)
+        # caa_support, caa_data = res["caa"]
+
+        # Main information window (Proto_Cipher)
+        # pc_support, pc_data = res["proto_cipher"]
+
+        # Expand End-user Certificate in data_view
+        val_path_item = data_model.item(0, 0)
+        val_path_index = data_model.indexFromItem(val_path_item)
+        end_cert_index = data_model.indexFromItem(val_path_item.child(0, 0))
+        self.ui.data_view.expand(val_path_index)
+        self.ui.data_view.expand(end_cert_index)
 
         # Open display window
         self.Form.show()
