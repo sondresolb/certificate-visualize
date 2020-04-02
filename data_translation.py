@@ -115,33 +115,61 @@ def stringify_certificate(cert):
     return certificate
 
 
+def translate_crl(support, crl_data):
+    if support:
+        data = []
+
+        for item in crl_data:
+            crl_item = {}
+            crl_item["issuer"] = item["issuer"]
+            crl_item["endpoint"] = item["endpoint"]
+            crl_item["is_delta"] = item["is_delta"]
+            crl_item["crl_number"] = item["crl_number"]
+            crl_item["signature_algorithm"] = item["signature_algorithm"]
+            crl_item["signature_hash"] = {
+                "name": item["hash_algorithm"][0], "bits": item["hash_algorithm"][1]}
+            crl_item["last_update"] = item["last_update"]
+            crl_item["next_update"] = item["next_update"]
+            crl_item["contains_revoked"] = item["has_revoked"]
+            if item["has_revoked"]:
+                crl_item["revocation_info"] = item["revocation_info"]
+
+            data.append(crl_item)
+
+    else:
+        data = {"not_supported": crl_data["no_crl"]}
+
+    return {"Certificate Revocation Lists": stringify_extension_value(data)}
+
+
 def translate_certificate_transparency(ct_data):
     data = []
 
-    try:
-        for item in data:
-            sct_item = {}
-            sct_item["version"] = item["version"]
-            sct_item["valid"] = item["valid"]
-            sct_item["submitted"] = item["timestamp"]
-            sct_item["entry_type"] = item["entry_type"]
+    for item in ct_data:
+        sct_item = {}
+        sct_item["version"] = item["version"]
+        sct_item["valid"] = item["valid"]
 
-            log_item = {}
-            log_item["name"] = item["description"]
-            log_item["operator"] = item["operator"]
-            log_item["state"] = {"status": item["state"]
+        err_msg = item.get("message", None)
+        if err_msg is not None:
+            sct_item["error_message"] = err_msg
+
+        sct_item["submitted"] = item["timestamp"]
+        sct_item["entry_type"] = item["entry_type"]
+
+        log_item = {}
+        log_item["name"] = item["description"]
+        log_item["operator"] = item["operator"]
+        log_item["log_state"] = {"log_state": item["state"]
                                  [0], "timestamp": item["state"][1]}
-            log_item["id"] = item["log_id"]
-            log_item["mmd"] = item["mmd"]
-            log_item["email"] = item["email"]
-            log_item["url"] = item["url"]
+        log_item["log_id"] = item["log_id"]
+        log_item["mmd"] = item["mmd"]
+        log_item["uri"] = item["url"]
+        log_item["email"] = item["email"]
 
-            data.append({"sct": sct_item, "log": log_item})
+        data.append({"sct": sct_item, "log": log_item})
 
-        return {"Certificate Transparency": stringify_extension_value(data)}
-
-    except Exception as e:
-        print(str(e))
+    return {"Certificate Transparency": stringify_extension_value(data)}
 
 
 def stringify_extension_value(extension_value):
@@ -231,8 +259,12 @@ def custom_item_layout(parent, key, value, is_string):
 
     except Exception as e:
         # Possibly remove index from tree here
+        if parent.text() == "Certificate Revocation Lists":
+            item[0].setText("endpoint")
+            item[1] = QStandardItem(value["endpoint"])
+            del value["endpoint"]
 
-        if parent.text() == "extensions":
+        elif parent.text() == "extensions":
             item[0].setToolTip(textwrap.fill(value["description"], 50))
             extension_item = extension_layout(value, item)
             item[1] = extension_item
@@ -273,6 +305,33 @@ def must_staple_layout(value, item_list):
 
 def ct_poison_layout(value, item_list):
     return QStandardItem("Yes") if value == 'True' else QStandardItem("No")
+
+
+def log_layout(value, item_list):
+    name = value["name"]
+    del value["name"]
+    return QStandardItem(name)
+
+
+def sct_layout(value, item_list):
+    item_list[0].setToolTip("Signed Certificate Timestamp")
+    return QStandardItem(value["submitted"])
+
+
+def mmd_layout(value, item_list):
+    description = (
+        """Maximum Merge Delay
+        The maximum amount of time that can pass
+        before the certificate is included in the public log"""
+    )
+    item_list[0].setToolTip(description)
+
+
+# Log state
+def log_state_layout(value, item_list):
+    log_state = value["log_state"]
+    del value["log_state"]
+    return QStandardItem(log_state)
 
 
 def public_key_layout(value, item_list):

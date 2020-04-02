@@ -50,7 +50,7 @@ def get_ct_information(end_cert):
             sct_info["email"] = operator["email"][0]
             sct_info["description"] = log_info["description"]
             sct_info["version"] = sct["version"]
-            sct_info["log_id"] = sct_log_id
+            sct_info["log_id"] = sct['log_id']
             sct_info["url"] = log_info["url"]
             sct_info["mmd"] = log_info["mmd"]
             state = next(iter(log_info["state"]))
