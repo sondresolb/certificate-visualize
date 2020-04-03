@@ -1,5 +1,6 @@
 import textwrap
 from datetime import datetime
+import copy
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 from PyQt5.QtCore import Qt
@@ -142,7 +143,12 @@ def translate_crl(support, crl_data):
     return {"Certificate Revocation Lists": stringify_extension_value(data)}
 
 
-def translate_certificate_transparency(ct_data):
+def translate_certificate_transparency(ct_support, ct_data):
+    if not ct_support:
+        no_supp = {
+            "not_supported": "No Signed Certificate Timestamps (SCTs)\nfound in End-user Certificate"}
+        return {"Certificate Transparency": no_supp}
+
     data = []
 
     for item in ct_data:
@@ -170,6 +176,34 @@ def translate_certificate_transparency(ct_data):
         data.append({"sct": sct_item, "log": log_item})
 
     return {"Certificate Transparency": stringify_extension_value(data)}
+
+
+def translate_proto_cipher(pc_data):
+    from collections import OrderedDict
+    new_data = copy.deepcopy(pc_data)
+
+    # for key, val in pc_data.items():
+    #     new_data[key] = dict(OrderedDict(sorted(val.items())))
+
+    try:
+        for protocol, ciphers in pc_data.items():
+            unknown_ciphers = {}
+            for cipher, cipher_info in ciphers.items():
+                if cipher_info == "unknown":
+                    unknown_ciphers[cipher] = new_data[protocol].pop(cipher)
+
+            new_data[protocol] = dict(OrderedDict(
+                sorted(new_data[protocol].items())))
+            unknown_ciphers = {"unknown": dict(
+                OrderedDict(sorted(unknown_ciphers.items())))}
+
+            if len(unknown_ciphers["unknown"]) > 0:
+                new_data[protocol].update(unknown_ciphers)
+
+    except Exception as e:
+        print(str(e))
+
+    return {"Cipher suites": new_data}
 
 
 def stringify_extension_value(extension_value):
@@ -268,6 +302,15 @@ def custom_item_layout(parent, key, value, is_string):
             item[0].setToolTip(textwrap.fill(value["description"], 50))
             extension_item = extension_layout(value, item)
             item[1] = extension_item
+
+        elif "TLSv" in parent.text():
+            if type(value) is not str and value.get("security") == 'insecure':
+                item[1] = QStandardItem("Not secure")
+            elif type(value) is not str and value.get("security") == 'recommended':
+                item[1] = QStandardItem("PFS")
+
+        elif parent.text() == "unknown":
+            item[1] = QStandardItem()
 
         return item
 

@@ -240,23 +240,25 @@ class Ui_MainWindow(QObject):
 
         # Main information window (CT)
         ct_support, ct_data = res["ct"]
-        if ct_support:
-            translated_ct = dt.translate_certificate_transparency(ct_data)
-            dt.fill_data_model(root_item, translated_ct)
-            # Expand first level of CT row(3)
-            ct_item = data_model.item(2, 0)
-            ct_index = data_model.indexFromItem(ct_item)
-            self.ui.data_view.expandRecursively(ct_index, 1)
-            self.ui.data_view.collapse(ct_index)
-        else:
-            # single item with not supported
-            pass
+        translated_ct = dt.translate_certificate_transparency(
+            ct_support, ct_data)
+        dt.fill_data_model(root_item, translated_ct)
+        # Expand first level of CT row(3)
+        ct_item = data_model.item(2, 0)
+        ct_index = data_model.indexFromItem(ct_item)
+        self.ui.data_view.expandRecursively(ct_index, 1)
+        self.ui.data_view.collapse(ct_index)
 
         # Main information window (CAA)
         # caa_support, caa_data = res["caa"]
 
         # Main information window (Proto_Cipher)
-        # pc_support, pc_data = res["proto_cipher"]
+        pc_support, pc_data = res["proto_cipher"]
+        if pc_support:
+            translated_pc = dt.translate_proto_cipher(pc_data)
+            dt.fill_data_model(root_item, translated_pc)
+        else:
+            pass
 
         # Expand End-user Certificate and first intermediate in data_view
         val_path_item = data_model.item(0, 0)
