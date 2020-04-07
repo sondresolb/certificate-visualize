@@ -1,9 +1,59 @@
 import textwrap
-from datetime import datetime
 import copy
+import locale
+from datetime import datetime
+from collections import OrderedDict
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 from PyQt5.QtCore import Qt
+
+
+def getDuration(then, now=datetime.now(), interval="default"):
+
+    # Returns a duration as specified by variable interval
+    # Functions, except totalDuration, returns [quotient, remainder]
+
+    duration = then - now  # For build-in functions
+    duration_in_s = duration.total_seconds()
+
+    def years():
+        return divmod(duration_in_s, 31536000)  # Seconds in a year=31536000.
+
+    def days(seconds=None):
+        # Seconds in a day = 86400
+        return divmod(seconds if seconds != None else duration_in_s, 86400)
+
+    def hours(seconds=None):
+        # Seconds in an hour = 3600
+        return divmod(seconds if seconds != None else duration_in_s, 3600)
+
+    def minutes(seconds=None):
+        # Seconds in a minute = 60
+        return divmod(seconds if seconds != None else duration_in_s, 60)
+
+    def seconds(seconds=None):
+        if seconds != None:
+            return divmod(seconds, 1)
+        return duration_in_s
+
+    def totalDuration():
+        y = years()
+        d = days(y[1])
+        h = hours(d[1])
+        m = minutes(h[1])
+        s = seconds(m[1])
+
+        return (f"Expires in:   {int(y[0])} years {int(d[0])} days "
+                f"{int(h[0])} hours {int(m[0])} minutes")
+
+    return {
+        'years': int(years()[0]),
+        'days': int(days()[0]),
+        'hours': int(hours()[0]),
+        'minutes': int(minutes()[0]),
+        'seconds': int(seconds()),
+        'default': totalDuration()
+    }[interval]
 
 
 def translate_connection_details(scan_result):
@@ -53,6 +103,7 @@ def translate_certificate_path(cert_path):
 
 
 def stringify_certificate(cert):
+    locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
     certificate = {}
     certificate["subject"] = cert.subject
     certificate["issuer"] = cert.issuer
@@ -69,8 +120,10 @@ def stringify_certificate(cert):
     certificate["ct_poison"] = str(cert.ct_poison)
     certificate["must_staple"] = str(cert.must_staple)
     certificate["validity_period"] = {
-        "not_before": str(cert.validity_period[0]),
-        "not_after": cert.validity_period[1]}
+        "not_before": cert.validity_period[0].strftime("%a %b %d %Y"),
+        "not_after": cert.validity_period[1].strftime("%a %b %d %Y"),
+        "expires": getDuration(cert.validity_period[1])}
+
     certificate["certificate_type"] = cert.certificate_type
 
     # Public keys
@@ -116,8 +169,34 @@ def stringify_certificate(cert):
     return certificate
 
 
-def translate_crl(support, crl_data):
-    if support:
+def translate_ocsp(ocsp_support, ocsp_data):
+    if not ocsp_support:
+        no_supp = {
+            "not_supported": ocsp_data}
+        return {"Online Certificate Status Protocol": no_supp}
+
+    for ocsp_endpoint in ocsp_data:
+        verfi_res = ocsp_endpoint["verification_result"]
+        if verfi_res["cert_match"]["passed"]:
+            del verfi_res["cert_match"]
+
+        if verfi_res["next_update"]["passed"]:
+            del verfi_res["next_update"]
+
+        if verfi_res["this_update"]["passed"]:
+            del verfi_res["this_update"]
+
+        if verfi_res["responder_cert"]["passed"]:
+            del verfi_res["responder_cert"]
+
+    if len(ocsp_data) == 1:
+        ocsp_data = ocsp_data[0]
+
+    return {"Online Certificate Status Protocol": stringify_extension_value(ocsp_data)}
+
+
+def translate_crl(crl_support, crl_data):
+    if crl_support:
         data = []
 
         for item in crl_data:
@@ -178,8 +257,20 @@ def translate_certificate_transparency(ct_support, ct_data):
     return {"Certificate Transparency": stringify_extension_value(data)}
 
 
-def translate_proto_cipher(pc_data):
-    from collections import OrderedDict
+def translate_caa(caa_support, caa_data):
+    if not caa_support:
+        no_supp = {
+            "not_supported": "No DNS CAA data found for domain"}
+        return {"Certificate Authority Authorization": no_supp}
+
+    return {"Certificate Authority Authorization": stringify_extension_value(caa_data)}
+
+
+def translate_proto_cipher(pc_support, pc_data):
+    if not pc_support:
+        no_supp = {"not_supported": pc_data}
+        return {"Cipher suites": no_supp}
+
     new_data = copy.deepcopy(pc_data)
 
     # for key, val in pc_data.items():
@@ -328,7 +419,8 @@ def signature_hash_layout(value, item_list):
 
 
 def validity_period_layout(value, item_list):
-    msg = f"Certificate expires ({value['not_after']})"
+    msg = value["expires"]
+    del value["expires"]
     return QStandardItem(msg)
 
 
@@ -370,11 +462,22 @@ def mmd_layout(value, item_list):
     item_list[0].setToolTip(description)
 
 
-# Log state
 def log_state_layout(value, item_list):
     log_state = value["log_state"]
     del value["log_state"]
     return QStandardItem(log_state)
+
+
+def kex_algorithm_layout(value, item_list):
+    item_list[0].setToolTip("Key Exchange algorithm")
+
+
+def auth_algorithm_layout(value, item_list):
+    item_list[0].setToolTip("Authentication algorithm")
+
+
+def enc_algorithm_layout(value, item_list):
+    item_list[0].setToolTip("Encryption algorithm")
 
 
 def public_key_layout(value, item_list):

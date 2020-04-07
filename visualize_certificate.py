@@ -82,8 +82,8 @@ class Cert_repr:
 
     # Returns tuple(not_valid_before, not_valid_after)
     def set_validity_period(self):
-        not_before = self.crypto_cert.not_valid_before.ctime()
-        not_after = self.crypto_cert.not_valid_after.ctime()
+        not_before = self.crypto_cert.not_valid_before
+        not_after = self.crypto_cert.not_valid_after
         return (not_before, not_after)
 
     def set_public_key(self):

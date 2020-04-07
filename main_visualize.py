@@ -227,38 +227,35 @@ class Ui_MainWindow(QObject):
 
         # Main information window (CRL)
         crl_support, crl_revoked, crl_data = res["crl"]
-        if crl_support:
-            translated_crl = dt.translate_crl(crl_support, crl_data)
-            dt.fill_data_model(root_item, translated_crl)
+        translated_crl = dt.translate_crl(crl_support, crl_data)
+        dt.fill_data_model(root_item, translated_crl)
 
-        else:
-            # One row with second value (not supported)
-            pass
-
-        # Main information window (OCSP)
-        # ocsp_support, ocsp_data = res["ocsp"]
+        # Main information window (OCSP) ocsp data can be error string
+        ocsp_support, ocsp_revoked, ocsp_data = res["ocsp"]
+        translated_ocsp = dt.translate_ocsp(ocsp_support, ocsp_data)
+        dt.fill_data_model(root_item, translated_ocsp)
 
         # Main information window (CT)
         ct_support, ct_data = res["ct"]
         translated_ct = dt.translate_certificate_transparency(
             ct_support, ct_data)
         dt.fill_data_model(root_item, translated_ct)
+
         # Expand first level of CT row(3)
-        ct_item = data_model.item(2, 0)
+        ct_item = data_model.item(3, 0)
         ct_index = data_model.indexFromItem(ct_item)
         self.ui.data_view.expandRecursively(ct_index, 1)
         self.ui.data_view.collapse(ct_index)
 
         # Main information window (CAA)
-        # caa_support, caa_data = res["caa"]
+        caa_support, caa_data = res["caa"]
+        translated_caa = dt.translate_caa(caa_support, caa_data)
+        dt.fill_data_model(root_item, translated_caa)
 
         # Main information window (Proto_Cipher)
         pc_support, pc_data = res["proto_cipher"]
-        if pc_support:
-            translated_pc = dt.translate_proto_cipher(pc_data)
-            dt.fill_data_model(root_item, translated_pc)
-        else:
-            pass
+        translated_pc = dt.translate_proto_cipher(pc_support, pc_data)
+        dt.fill_data_model(root_item, translated_pc)
 
         # Expand End-user Certificate and first intermediate in data_view
         val_path_item = data_model.item(0, 0)
