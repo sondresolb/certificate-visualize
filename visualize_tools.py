@@ -2,6 +2,7 @@ import idna
 import pem
 import requests
 import certifi
+import textwrap
 from socket import socket
 
 import visualize_exceptions as vis_ex
@@ -108,8 +109,9 @@ def fetch_certificate_chain(domain, timeout=300):
         print(f"Failed to fetch intermediate certificate: {str(ife)}")
         return cert_chain, conn_details
     except Exception as e:
-        raise vis_ex.CertificateFetchingError(
-            f"Error occured while getting certificates for {domain}: {type(e)}: {e}") from e
+        raise vis_ex.CertificateFetchingError(textwrap.fill(
+            f"Error occured while getting certificates for {domain}: {type(e)}: {e}", 50))
+
     finally:
         s.close()
 

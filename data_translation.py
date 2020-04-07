@@ -385,9 +385,10 @@ def custom_item_layout(parent, key, value, is_string):
     except Exception as e:
         # Possibly remove index from tree here
         if parent.text() == "Certificate Revocation Lists":
-            item[0].setText("endpoint")
-            item[1] = QStandardItem(value["endpoint"])
-            del value["endpoint"]
+            if type(value) is not str:
+                item[0].setText("endpoint")
+                item[1] = QStandardItem(value["endpoint"])
+                del value["endpoint"]
 
         elif parent.text() == "extensions":
             item[0].setToolTip(textwrap.fill(value["description"], 50))
@@ -478,6 +479,12 @@ def auth_algorithm_layout(value, item_list):
 
 def enc_algorithm_layout(value, item_list):
     item_list[0].setToolTip("Encryption algorithm")
+
+
+def verification_result_layout(value, item_list):
+    msg = value["message"]
+    del value["message"]
+    return QStandardItem(msg)
 
 
 def public_key_layout(value, item_list):

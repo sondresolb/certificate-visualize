@@ -13,17 +13,15 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName("Form")
-        Form.resize(985, 703)
+        Form.resize(1127, 703)
         self.gridLayout = QtWidgets.QGridLayout(Form)
         self.gridLayout.setContentsMargins(15, 15, 15, 15)
         self.gridLayout.setObjectName("gridLayout")
         self.splitter_2 = QtWidgets.QSplitter(Form)
-        sizePolicy = QtWidgets.QSizePolicy(
-            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(
-            self.splitter_2.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(self.splitter_2.sizePolicy().hasHeightForWidth())
         self.splitter_2.setSizePolicy(sizePolicy)
         self.splitter_2.setMinimumSize(QtCore.QSize(0, 0))
         self.splitter_2.setBaseSize(QtCore.QSize(0, 0))
@@ -34,28 +32,24 @@ class Ui_Form(object):
         self.splitter_2.setHandleWidth(4)
         self.splitter_2.setObjectName("splitter_2")
         self.data_view = QtWidgets.QTreeView(self.splitter_2)
-        sizePolicy = QtWidgets.QSizePolicy(
-            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(20)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(
-            self.data_view.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(self.data_view.sizePolicy().hasHeightForWidth())
         self.data_view.setSizePolicy(sizePolicy)
         self.data_view.setMinimumSize(QtCore.QSize(0, 0))
-        self.data_view.setSizeAdjustPolicy(
-            QtWidgets.QAbstractScrollArea.AdjustToContents)
-        self.data_view.setEditTriggers(
-            QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.data_view.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
+        self.data_view.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.data_view.setAlternatingRowColors(True)
+        self.data_view.setIndentation(30)
         self.data_view.setAnimated(True)
         self.data_view.setObjectName("data_view")
         self.data_view.header().setCascadingSectionResizes(True)
-        self.data_view.header().setDefaultSectionSize(280)
+        self.data_view.header().setDefaultSectionSize(350)
         self.layoutWidget = QtWidgets.QWidget(self.splitter_2)
         self.layoutWidget.setObjectName("layoutWidget")
         self.verticalLayout = QtWidgets.QVBoxLayout(self.layoutWidget)
-        self.verticalLayout.setSizeConstraint(
-            QtWidgets.QLayout.SetDefaultConstraint)
+        self.verticalLayout.setSizeConstraint(QtWidgets.QLayout.SetDefaultConstraint)
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout.setObjectName("verticalLayout")
         self.horizontalLayout = QtWidgets.QHBoxLayout()
@@ -67,12 +61,10 @@ class Ui_Form(object):
         font.setFamily("Tlwg Typo")
         font.setPointSize(28)
         self.score_name.setFont(font)
-        self.score_name.setAlignment(
-            QtCore.Qt.AlignBottom | QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing)
+        self.score_name.setAlignment(QtCore.Qt.AlignBottom|QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing)
         self.score_name.setObjectName("score_name")
         self.horizontalLayout.addWidget(self.score_name)
-        spacerItem = QtWidgets.QSpacerItem(
-            2, 20, QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Minimum)
+        spacerItem = QtWidgets.QSpacerItem(2, 20, QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout.addItem(spacerItem)
         self.score = QtWidgets.QLabel(self.layoutWidget)
         font = QtGui.QFont()
@@ -89,25 +81,20 @@ class Ui_Form(object):
         self.score.setFrameShadow(QtWidgets.QFrame.Plain)
         self.score.setTextFormat(QtCore.Qt.AutoText)
         self.score.setScaledContents(False)
-        self.score.setAlignment(QtCore.Qt.AlignBottom |
-                                QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing)
+        self.score.setAlignment(QtCore.Qt.AlignBottom|QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing)
         self.score.setObjectName("score")
         self.horizontalLayout.addWidget(self.score)
-        spacerItem1 = QtWidgets.QSpacerItem(
-            0, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        spacerItem1 = QtWidgets.QSpacerItem(0, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout.addItem(spacerItem1)
         self.status_light = QtWidgets.QLabel(self.layoutWidget)
-        sizePolicy = QtWidgets.QSizePolicy(
-            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(
-            self.status_light.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(self.status_light.sizePolicy().hasHeightForWidth())
         self.status_light.setSizePolicy(sizePolicy)
         self.status_light.setMaximumSize(QtCore.QSize(60, 60))
         self.status_light.setText("")
-        self.status_light.setPixmap(
-            QtGui.QPixmap("qt_files/color_lights/idle_light.svg"))
+        self.status_light.setPixmap(QtGui.QPixmap("color_lights/idle_light.svg"))
         self.status_light.setScaledContents(True)
         self.status_light.setAlignment(QtCore.Qt.AlignCenter)
         self.status_light.setIndent(-1)
@@ -121,21 +108,16 @@ class Ui_Form(object):
         self.metric_tree = QtWidgets.QTreeView(self.splitter)
         self.metric_tree.setObjectName("metric_tree")
         self.connection_details = QtWidgets.QTableWidget(self.splitter)
-        sizePolicy = QtWidgets.QSizePolicy(
-            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(
-            self.connection_details.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(self.connection_details.sizePolicy().hasHeightForWidth())
         self.connection_details.setSizePolicy(sizePolicy)
         self.connection_details.setMaximumSize(QtCore.QSize(16777215, 293))
-        self.connection_details.setSizeAdjustPolicy(
-            QtWidgets.QAbstractScrollArea.AdjustToContents)
-        self.connection_details.setEditTriggers(
-            QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.connection_details.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
+        self.connection_details.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.connection_details.setAlternatingRowColors(True)
-        self.connection_details.setSelectionMode(
-            QtWidgets.QAbstractItemView.SingleSelection)
+        self.connection_details.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
         self.connection_details.setObjectName("connection_details")
         self.connection_details.setColumnCount(1)
         self.connection_details.setRowCount(9)
@@ -183,31 +165,29 @@ class Ui_Form(object):
         item = self.connection_details.verticalHeaderItem(2)
         item.setText(_translate("Form", "TLS Version"))
         item.setToolTip(_translate("Form", "Transport Layer Security\n"
-                                   " versions supported by server"))
+" versions supported by server"))
         item = self.connection_details.verticalHeaderItem(3)
         item.setText(_translate("Form", "Protocol"))
         item.setToolTip(_translate("Form", "Protocol used for secure\n"
-                                   " transmission of certificate data"))
+" transmission of certificate data"))
         item = self.connection_details.verticalHeaderItem(4)
         item.setText(_translate("Form", "Cipher Suite"))
         item.setToolTip(_translate("Form", "Cipher Suite used for\n"
-                                   " securing connection"))
+" securing connection"))
         item = self.connection_details.verticalHeaderItem(5)
         item.setText(_translate("Form", "HSTS"))
-        item.setToolTip(_translate(
-            "Form", "HTTP Strict Transport Security support"))
+        item.setToolTip(_translate("Form", "HTTP Strict Transport Security support"))
         item = self.connection_details.verticalHeaderItem(6)
         item.setText(_translate("Form", "OCSP-Stapling"))
         item.setToolTip(_translate("Form", "Online Certificate Status\n"
-                                   " Protocol stapling support"))
+" Protocol stapling support"))
         item = self.connection_details.verticalHeaderItem(7)
         item.setText(_translate("Form", "DNS CAA"))
         item.setToolTip(_translate("Form", "Domain Name System Certificate\n"
-                                   " Authority Authorization support"))
+" Authority Authorization support"))
         item = self.connection_details.verticalHeaderItem(8)
         item.setText(_translate("Form", "Certificates"))
-        item.setToolTip(_translate(
-            "Form", "Number of certificates provided by server"))
+        item.setToolTip(_translate("Form", "Number of certificates provided by server"))
         item = self.connection_details.horizontalHeaderItem(0)
         item.setText(_translate("Form", "Details"))
         __sortingEnabled = self.connection_details.isSortingEnabled()

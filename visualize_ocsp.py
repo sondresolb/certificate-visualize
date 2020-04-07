@@ -248,6 +248,7 @@ def validate_ocsp_response(host, ocsp_response, issuer, cert_serial_number, hc=T
                 extended_keyusage = cert.extensions.get_extension_for_oid(
                     ext_keyusage_oid).value
             except cryptography_x509.extensions.ExtensionNotFound:
+                validation_result["message"] = "Validation failure: Signing delegation not specified"
                 return validation_result
 
             if any(keyusage.dotted_string == ("1.3.6.1.5.5.7.3.9")

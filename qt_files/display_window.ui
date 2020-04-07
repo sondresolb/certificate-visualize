@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>985</width>
+    <width>1127</width>
     <height>703</height>
    </rect>
   </property>
@@ -83,6 +83,9 @@
       <property name="alternatingRowColors">
        <bool>true</bool>
       </property>
+      <property name="indentation">
+       <number>30</number>
+      </property>
       <property name="animated">
        <bool>true</bool>
       </property>
@@ -90,7 +93,7 @@
        <bool>true</bool>
       </attribute>
       <attribute name="headerDefaultSectionSize">
-       <number>280</number>
+       <number>350</number>
       </attribute>
      </widget>
      <widget class="QWidget" name="layoutWidget">
