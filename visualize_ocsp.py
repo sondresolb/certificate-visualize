@@ -336,7 +336,8 @@ def validate_ocsp_responder(host):
 
 def is_certificate_revoked(responses):
     for response in responses:
-        if response["certificate_status"] == 'REVOKED':
+        res = response.get("certificate_status", None)
+        if res == 'REVOKED':
             return True
     else:
         return False

@@ -31,7 +31,8 @@ class Ui_Form(object):
         self.splitter_2.setFrameShape(QtWidgets.QFrame.NoFrame)
         self.splitter_2.setFrameShadow(QtWidgets.QFrame.Plain)
         self.splitter_2.setOrientation(QtCore.Qt.Horizontal)
-        self.splitter_2.setHandleWidth(4)
+        self.splitter_2.setOpaqueResize(True)
+        self.splitter_2.setHandleWidth(5)
         self.splitter_2.setObjectName("splitter_2")
         self.data_view = QtWidgets.QTreeView(self.splitter_2)
         sizePolicy = QtWidgets.QSizePolicy(
@@ -120,7 +121,13 @@ class Ui_Form(object):
         self.splitter.setHandleWidth(0)
         self.splitter.setObjectName("splitter")
         self.metric_tree = QtWidgets.QTreeView(self.splitter)
+        self.metric_tree.setEditTriggers(
+            QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.metric_tree.setAlternatingRowColors(True)
+        self.metric_tree.setIndentation(20)
+        self.metric_tree.setAnimated(True)
         self.metric_tree.setObjectName("metric_tree")
+        self.metric_tree.header().setDefaultSectionSize(135)
         self.connection_details = QtWidgets.QTableWidget(self.splitter)
         sizePolicy = QtWidgets.QSizePolicy(
             QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)

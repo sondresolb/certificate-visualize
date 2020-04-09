@@ -58,8 +58,11 @@
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
+     <property name="opaqueResize">
+      <bool>true</bool>
+     </property>
      <property name="handleWidth">
-      <number>4</number>
+      <number>5</number>
      </property>
      <widget class="QTreeView" name="data_view">
       <property name="sizePolicy">
@@ -241,7 +244,23 @@
          <property name="handleWidth">
           <number>0</number>
          </property>
-         <widget class="QTreeView" name="metric_tree"/>
+         <widget class="QTreeView" name="metric_tree">
+          <property name="editTriggers">
+           <set>QAbstractItemView::NoEditTriggers</set>
+          </property>
+          <property name="alternatingRowColors">
+           <bool>true</bool>
+          </property>
+          <property name="indentation">
+           <number>20</number>
+          </property>
+          <property name="animated">
+           <bool>true</bool>
+          </property>
+          <attribute name="headerDefaultSectionSize">
+           <number>135</number>
+          </attribute>
+         </widget>
          <widget class="QTableWidget" name="connection_details">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">

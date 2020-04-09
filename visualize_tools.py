@@ -4,6 +4,7 @@ import requests
 import certifi
 import textwrap
 from socket import socket
+from datetime import datetime
 
 import visualize_exceptions as vis_ex
 from visualize_certificate import Cert_repr
@@ -47,6 +48,7 @@ def fetch_certificate_chain(domain, timeout=300):
 
     Returns:
         cert_chain (list): sorted list of cert_repr objects
+        conn_details (dict): connection information
 
     Raises:
         (visualize_exceptions.NoCertificatesError):
@@ -59,8 +61,8 @@ def fetch_certificate_chain(domain, timeout=300):
             If the connection failed, parsing failed or any other
             exception occured during the fetching.
     """
+    conn_details = {"date": get_scan_date()}
     certificates = []
-    conn_details = {}
 
     hostname = idna.encode(domain)
     # SSL.TLSv1_2_METHOD, SSL.SSLv23_METHOD
@@ -387,6 +389,11 @@ def sort_chain(cert_chain, domain):
         raise vis_ex.InvalidCertificateChain(
             f"Certificate chain for {domain} is not a correct chain:\n"
             f"{[(c.subject['commonName'], c.issuer['commonName']) for c in cert_chain]}")
+
+
+def get_scan_date():
+    today = datetime.now()
+    return today.strftime("%d-%m-%Y %H:%M:%S")
 
 
 def rep_cert(cert_obj):

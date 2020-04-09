@@ -102,6 +102,21 @@ def translate_certificate_path(cert_path):
     return {"Validation path": new_path}
 
 
+def translate_failed_path(cert_path):
+    new_path = {}
+
+    new_path["End-user Certificate"] = stringify_certificate(
+        cert_path["end_cert"])
+    if cert_path["issuer"] is not None:
+        new_path["Issuer"] = stringify_certificate(cert_path["issuer"])
+
+    return {"Validation path": new_path}
+
+
+def translate_all_keyusages(key_usages):
+    return {"Key usages": key_usages}
+
+
 def stringify_certificate(cert):
     locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
     certificate = {}
@@ -176,18 +191,26 @@ def translate_ocsp(ocsp_support, ocsp_data):
         return {"Online Certificate Status Protocol": no_supp}
 
     for ocsp_endpoint in ocsp_data:
-        verfi_res = ocsp_endpoint["verification_result"]
-        if verfi_res["cert_match"]["passed"]:
-            del verfi_res["cert_match"]
+        verfi_res = ocsp_endpoint.get("verification_result", None)
+        if verfi_res != None:
+            if verfi_res["cert_match"]["passed"]:
+                del verfi_res["cert_match"]
 
-        if verfi_res["next_update"]["passed"]:
-            del verfi_res["next_update"]
+            if verfi_res["next_update"]["passed"]:
+                del verfi_res["next_update"]
 
-        if verfi_res["this_update"]["passed"]:
-            del verfi_res["this_update"]
+            if verfi_res["this_update"]["passed"]:
+                del verfi_res["this_update"]
 
-        if verfi_res["responder_cert"]["passed"]:
-            del verfi_res["responder_cert"]
+            if verfi_res["responder_cert"]["passed"]:
+                del verfi_res["responder_cert"]
+        else:
+            ocsp_endpoint["verification_result"] = "Could not verify"
+
+        ocsp_resp_msg = ocsp_endpoint.get("response_message", None)
+        if ocsp_resp_msg:
+            ocsp_endpoint["response_message"] = textwrap.fill(
+                ocsp_resp_msg, 50)
 
     if len(ocsp_data) == 1:
         ocsp_data = ocsp_data[0]
@@ -268,13 +291,10 @@ def translate_caa(caa_support, caa_data):
 
 def translate_proto_cipher(pc_support, pc_data):
     if not pc_support:
-        no_supp = {"not_supported": pc_data}
+        no_supp = {"not_supported": textwrap.fill(pc_data, 50)}
         return {"Cipher suites": no_supp}
 
     new_data = copy.deepcopy(pc_data)
-
-    # for key, val in pc_data.items():
-    #     new_data[key] = dict(OrderedDict(sorted(val.items())))
 
     try:
         for protocol, ciphers in pc_data.items():
@@ -295,6 +315,26 @@ def translate_proto_cipher(pc_support, pc_data):
         print(str(e))
 
     return {"Cipher suites": new_data}
+
+
+def translate_revoked(cert_revoked, crl_support, ocsp_support):
+    is_revoked = "Yes" if cert_revoked else "No"
+    crl = "Supported" if crl_support else "Not supported"
+    ocsp = "Supported" if ocsp_support else "Not supported"
+
+    support = {"is_revoked": is_revoked,
+               "CRL": crl, "OCSP": ocsp}
+    return {"Revoked": support}
+
+
+def translate_validation_res(validation_res):
+    if validation_res[0]:
+        return {"Path validation": "Successful"}
+    else:
+        reason = textwrap.fill(validation_res[2]["reason"], 60)
+        details = textwrap.fill(validation_res[2]["details"], 60)
+        res = {"status": "Failed", "Reason": reason, "Details": details}
+        return {"Path validation": res}
 
 
 def stringify_extension_value(extension_value):
@@ -337,6 +377,14 @@ def create_data_model(display, parent):
     data_model.setHeaderData(0, Qt.Horizontal, "Name")
     data_model.setHeaderData(1, Qt.Horizontal, "Value")
     display.data_view.setModel(data_model)
+    return data_model
+
+
+def create_metric_model(display, parent):
+    data_model = QStandardItemModel(0, 2, parent)
+    data_model.setHeaderData(0, Qt.Horizontal, "Name")
+    data_model.setHeaderData(1, Qt.Horizontal, "Value")
+    display.metric_tree.setModel(data_model)
     return data_model
 
 
@@ -383,7 +431,6 @@ def custom_item_layout(parent, key, value, is_string):
         return item
 
     except Exception as e:
-        # Possibly remove index from tree here
         if parent.text() == "Certificate Revocation Lists":
             if type(value) is not str:
                 item[0].setText("endpoint")
@@ -403,6 +450,24 @@ def custom_item_layout(parent, key, value, is_string):
 
         elif parent.text() == "unknown":
             item[1] = QStandardItem()
+
+        elif key == "Revoked":
+            item[0].setToolTip("End-user certificate revoked?")
+            item[1] = QStandardItem(value["is_revoked"])
+            del value["is_revoked"]
+
+        elif key == "Path validation":
+            if type(value) is not str:
+                item[1] = QStandardItem(value["status"])
+                del value["status"]
+
+        elif parent.text() == "Path validation" and key == "Details":
+            msg = item[1].text()
+            item[1].clearData()
+            item[0].insertRow(0, [QStandardItem(), QStandardItem(msg)])
+
+        elif key == "Key usages":
+            item[1] = QStandardItem(str(len(value)))
 
         return item
 

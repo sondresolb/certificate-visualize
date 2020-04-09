@@ -121,11 +121,18 @@ def get_supported_proto_ciphers(domain, ip, progress_signal):
                 except subprocess.TimeoutExpired:
                     pass
 
+        for proto_c, c_val in proto_cipher_support.items():
+            if len(c_val) > 0:
+                break
+        else:
+            raise vis_ex.CipherFetchingError(
+                "Unable to extract cipher information from server")
+
         return proto_cipher_support
 
     except Exception as e:
         raise vis_ex.CipherFetchingError(
-            "Failed while processing proto-cipher list") from e
+            f"Failed while analysing ciphers: {str(e)}") from e
 
 
 def get_connection_information(domain, timeout=300):

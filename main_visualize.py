@@ -211,62 +211,102 @@ class Ui_MainWindow(QObject):
             self.ui.connection_details, connection_details)
 
         data_model = dt.create_data_model(self.ui, self.Form)
-        root_item = data_model.invisibleRootItem()
+        data_root = data_model.invisibleRootItem()
+
+        metric_model = dt.create_metric_model(self.ui, self.Form)
+        metric_root = metric_model.invisibleRootItem()
 
         # Main information window (Certificate path)
-        validation_res, cert_path = res["validation_path"]
-        if validation_res:
-            certificate_path = dt.translate_certificate_path(cert_path)
-            dt.fill_data_model(root_item, certificate_path)
+        validation_res = res["validation_path"]
+        if validation_res[0]:
+            cert_path = validation_res[1]
+            translated_path = dt.translate_certificate_path(cert_path)
+            dt.fill_data_model(data_root, translated_path)
 
         else:
             # Call seperate function for displaying validation failure
             # with the error message. Parse and display only end-cert
-            # and issuer
-            pass
+            # and issuer. Error should go in metric window
+            _, cert_path, _ = validation_res
+            translated_path = dt.translate_failed_path(cert_path)
+            dt.fill_data_model(data_root, translated_path)
+
+            # Displaying validation error dialog to warn user
+            # self.ExceptionDialog = QtWidgets.QDialog()
+            # self.ex_ui = Ui_ExceptionDialog()
+            # self.ex_ui.setupUi(self.ExceptionDialog, path_error)
+            # self.ExceptionDialog.show()
 
         # Main information window (CRL)
         crl_support, crl_revoked, crl_data = res["crl"]
         translated_crl = dt.translate_crl(crl_support, crl_data)
-        dt.fill_data_model(root_item, translated_crl)
+        dt.fill_data_model(data_root, translated_crl)
 
         # Main information window (OCSP) ocsp data can be error string
         ocsp_support, ocsp_revoked, ocsp_data = res["ocsp"]
         translated_ocsp = dt.translate_ocsp(ocsp_support, ocsp_data)
-        dt.fill_data_model(root_item, translated_ocsp)
+        dt.fill_data_model(data_root, translated_ocsp)
 
         # Main information window (CT)
         ct_support, ct_data = res["ct"]
         translated_ct = dt.translate_certificate_transparency(
             ct_support, ct_data)
-        dt.fill_data_model(root_item, translated_ct)
+        dt.fill_data_model(data_root, translated_ct)
 
         # Expand first level of CT row(3)
-        ct_item = data_model.item(3, 0)
-        ct_index = data_model.indexFromItem(ct_item)
-        self.ui.data_view.expandRecursively(ct_index, 1)
-        self.ui.data_view.collapse(ct_index)
+        if ct_support:
+            ct_item = data_model.item(3, 0)
+            ct_index = data_model.indexFromItem(ct_item)
+            self.ui.data_view.expandRecursively(ct_index, 1)
+            self.ui.data_view.collapse(ct_index)
 
         # Main information window (CAA)
         caa_support, caa_data = res["caa"]
         translated_caa = dt.translate_caa(caa_support, caa_data)
-        dt.fill_data_model(root_item, translated_caa)
+        dt.fill_data_model(data_root, translated_caa)
 
         # Main information window (Proto_Cipher)
         pc_support, pc_data = res["proto_cipher"]
         translated_pc = dt.translate_proto_cipher(pc_support, pc_data)
-        dt.fill_data_model(root_item, translated_pc)
+        dt.fill_data_model(data_root, translated_pc)
 
         # Expand End-user Certificate and first intermediate in data_view
-        val_path_item = data_model.item(0, 0)
-        val_path_index = data_model.indexFromItem(val_path_item)
-        end_cert_index = data_model.indexFromItem(val_path_item.child(0, 0))
-        interm_index = data_model.indexFromItem(
-            val_path_item.child(1, 0).child(0, 0))
-        self.ui.data_view.expand(val_path_index)
-        self.ui.data_view.expand(end_cert_index)
-        self.ui.data_view.expand(interm_index)
+        if validation_res[0]:
+            val_path_item = data_model.item(0, 0)
+            val_path_index = data_model.indexFromItem(val_path_item)
+            end_cert_index = data_model.indexFromItem(
+                val_path_item.child(0, 0))
+            interm_index = data_model.indexFromItem(
+                val_path_item.child(1, 0).child(0, 0))
+            self.ui.data_view.expand(val_path_index)
+            self.ui.data_view.expand(end_cert_index)
+            self.ui.data_view.expand(interm_index)
 
+        # Translation of metrics window
+        # Scan date
+        scan_date = res["connection"]["date"]
+        dt.fill_data_model(metric_root, {"Scan date": scan_date})
+
+        # Certificate revoked
+        translated_revoked = dt.translate_revoked(
+            res["cert_revoked"], crl_support, ocsp_support)
+        dt.fill_data_model(metric_root, translated_revoked)
+
+        # Path validation
+        translated_validation_res = dt.translate_validation_res(validation_res)
+        dt.fill_data_model(metric_root, translated_validation_res)
+
+        # Total keyusage
+        try:
+            translated_keyusage = dt.translate_all_keyusages(
+                res["total_keyusage"])
+            dt.fill_data_model(metric_root, translated_keyusage)
+        except Exception:
+            # Did not find a total key usage entry
+            pass
+
+        # resize data_views second column to fit data
+        self.ui.data_view.resizeColumnToContents(1)
         # Open display window
         self.Form.show()
 

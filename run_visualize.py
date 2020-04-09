@@ -59,10 +59,17 @@ def certificate_scan(domain, signal):
             validation_res[1]))
     else:
         # This is a complete failure
-        scan_result["validation_path"] = (False, (
+        cert_path = {"end_cert": end_cert, "issuer": issuer_cert}
+
+        path_error = {
+            "reason": validation_res[1], "details": validation_res[2]}
+
+        error_string = (
             f"Chain validation for {domain} failed: {validation_res[1]}"
-            f"\nDetails: {validation_res[2]}"))
-        print(scan_result["validation_path"][1])
+            f"\n\nDetails: {validation_res[2]}")
+
+        scan_result["validation_path"] = (False, cert_path, path_error)
+        print(error_string)
 
     signal_wrap(signal, 20, "processing CRL data")
     # *CRL*
@@ -130,6 +137,19 @@ def certificate_scan(domain, signal):
         scan_result["proto_cipher"] = (False, str(cfe))
         print(str(cfe))
 
+    # Indicator if certificate is revoked
+    scan_result["cert_revoked"] = crl_revoked and ocsp_revoked
+
+    # All keyusages
+    try:
+        total_keyusage = []
+        total_keyusage.extend(end_cert.extensions["keyUsage"]["value"])
+        total_keyusage.extend(end_cert.extensions["extendedKeyUsage"]["value"])
+        scan_result["total_keyusage"] = total_keyusage
+    except Exception as e:
+        # Skip if there are no extended keyusage
+        pass
+
     signal_wrap(signal, 100, "analysis completed")
     import time
     time.sleep(1)
@@ -145,14 +165,14 @@ def run_stress_test(test_domain=None):
     if test_domain:
         domains.append(test_domain)
     else:
-        # with open("uni_domains.json") as json_file:
-        #     uni_json = json.load(json_file)
-        #     for item in uni_json:
-        #         domains.extend([urlsplit(i).netloc for i in item["web_pages"]])
+        with open("uni_domains.json") as json_file:
+            uni_json = json.load(json_file)
+            for item in uni_json:
+                domains.extend([urlsplit(i).netloc for i in item["web_pages"]])
 
-        with open("top-1m.json") as json_file:
-            domains_json = json.load(json_file)
-            domains = domains_json["endpoints"]
+        # with open("top-1m.json") as json_file:
+        #     domains_json = json.load(json_file)
+        #     domains = domains_json["endpoints"]
 
     vis_tools.set_trust_store()     # Set custom trust store for validation
 
@@ -194,6 +214,7 @@ def run_stress_test(test_domain=None):
                 f"Chain validation for {domain} failed: {validation_res[1]}"
                 f"\nDetails: {validation_res[2]}"))
             print(validation_path)
+            sys.exit(0)
 
         # *CRL*
         crl_revoked, crl_result = vis_crl.check_crl(end_cert, issuer_cert)
