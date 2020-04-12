@@ -62,13 +62,7 @@ def translate_connection_details(scan_result):
     connection_details["ip"] = str(scan_result["connection"]["ip"])
     connection_details["server_name"] = str(
         scan_result["connection"]["server_name"])
-
-    proto_c_support, proto_ciphers = scan_result["proto_cipher"]
-    if proto_c_support:
-        connection_details["tls_versions"] = ", ".join(
-            list(proto_ciphers.keys()))
-    else:
-        connection_details["tls_versions"] = "N/A"
+    connection_details["tls_versions"] = scan_result["connection"]["tls_versions"]
 
     connection_details["protocol"] = str(scan_result["connection"]["protocol"])
     connection_details["cipher"] = str(scan_result["connection"]["cipher"])

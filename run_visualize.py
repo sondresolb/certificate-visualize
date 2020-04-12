@@ -134,8 +134,14 @@ def certificate_scan(domain, signal):
         scan_result["proto_cipher"] = (True, proto_cipher_result)
         print(f"\nProto_ciphers:\n{proto_cipher_result}")
     except c_ex.CipherFetchingError as cfe:
-        scan_result["proto_cipher"] = (False, str(cfe))
+        proto_c_err, proto_cipher_result = cfe.args
+        scan_result["proto_cipher"] = (False, proto_c_err)
         print(str(cfe))
+
+    # Add list of supported protocols to connection details
+    scan_result["connection"]["tls_versions"] = ", ".join(
+            list(proto_cipher_result.keys()))
+
 
     # Indicator if certificate is revoked
     scan_result["cert_revoked"] = crl_revoked and ocsp_revoked

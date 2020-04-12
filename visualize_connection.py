@@ -132,7 +132,8 @@ def get_supported_proto_ciphers(domain, ip, progress_signal):
 
     except Exception as e:
         raise vis_ex.CipherFetchingError(
-            f"Failed while analysing ciphers: {str(e)}") from e
+            f"Failed while analysing ciphers: {str(e)}", proto_cipher_support
+            ) from e
 
 
 def get_connection_information(domain, timeout=300):
@@ -150,9 +151,7 @@ def get_connection_information(domain, timeout=300):
             connection gets closed
 
     Returns:
-        tuple(server_ip, server_info):
-            server_ip describes the ip of the server (IPv4)
-            server_info is a list of dicts containing server info
+        connection_info (list): list of dicts containing protocol info
     """
     connection_info = []
 
