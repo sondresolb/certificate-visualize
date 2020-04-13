@@ -45,7 +45,14 @@ def certificate_scan(domain, signal):
     except c_ex.InvalidCertificateChain as icc:
         print(str(icc))
         raise(c_ex.InvalidCertificateChain(str(icc)))
-    except IndexError as ie:
+    except c_ex.IntermediateFetchingError as ife:
+        ife_args = ife.args
+        print(ife_args[0])
+        cert_chain = ife_args[1]
+        conn_details = ife_args[2]
+        end_cert = cert_chain[0]
+        scan_result["connection"] = conn_details
+        scan_result["certs_served"] = len(cert_chain)
         issuer_cert = None
 
     signal_wrap(signal, 12, "validating certificate path")
@@ -128,20 +135,21 @@ def certificate_scan(domain, signal):
 
     signal_wrap(signal, 84, "analysing protocol and cipher-suite support")
     # *Protocol and cipher support*
-    try:
-        proto_cipher_result = vis_conn.get_supported_proto_ciphers(
-            domain, conn_details["ip"], (signal, 84))
-        scan_result["proto_cipher"] = (True, proto_cipher_result)
-        print(f"\nProto_ciphers:\n{proto_cipher_result}")
-    except c_ex.CipherFetchingError as cfe:
-        proto_c_err, proto_cipher_result = cfe.args
-        scan_result["proto_cipher"] = (False, proto_c_err)
-        print(str(cfe))
+    scan_result["proto_cipher"] = (False, "")
+    # try:
+    #     proto_cipher_result = vis_conn.get_supported_proto_ciphers(
+    #         domain, conn_details["ip"], (signal, 84))
+    #     scan_result["proto_cipher"] = (True, proto_cipher_result)
+    #     print(f"\nProto_ciphers:\n{proto_cipher_result}")
+    # except c_ex.CipherFetchingError as cfe:
+    #     proto_c_err, proto_cipher_result = cfe.args
+    #     scan_result["proto_cipher"] = (False, proto_c_err)
+    #     print(str(cfe))
 
-    # Add list of supported protocols to connection details
-    scan_result["connection"]["tls_versions"] = ", ".join(
-            list(proto_cipher_result.keys()))
-
+    # # Add list of supported protocols to connection details
+    # scan_result["connection"]["tls_versions"] = ", ".join(
+    #         list(proto_cipher_result.keys()))
+    scan_result["connection"]["tls_versions"] = []
 
     # Indicator if certificate is revoked
     scan_result["cert_revoked"] = crl_revoked and ocsp_revoked

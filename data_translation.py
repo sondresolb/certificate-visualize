@@ -43,7 +43,7 @@ def getDuration(then, now=datetime.now(), interval="default"):
         m = minutes(h[1])
         s = seconds(m[1])
 
-        return (f"Expires in:   {int(y[0])} years {int(d[0])} days "
+        return (f"{int(y[0])} years {int(d[0])} days "
                 f"{int(h[0])} hours {int(m[0])} minutes")
 
     return {
@@ -128,10 +128,17 @@ def stringify_certificate(cert):
     certificate["expired"] = str(cert.has_expired)
     certificate["ct_poison"] = str(cert.ct_poison)
     certificate["must_staple"] = str(cert.must_staple)
+
     certificate["validity_period"] = {
         "not_before": cert.validity_period[0].strftime("%a %b %d %Y"),
-        "not_after": cert.validity_period[1].strftime("%a %b %d %Y"),
-        "expires": getDuration(cert.validity_period[1])}
+        "not_after": cert.validity_period[1].strftime("%a %b %d %Y")}
+
+    if cert.has_expired:
+        expired = getDuration(datetime.now(), cert.validity_period[1])
+        certificate["validity_period"]["has_expired"] = expired
+    else:
+        expires = getDuration(cert.validity_period[1])
+        certificate["validity_period"]["expires"] = expires
 
     certificate["certificate_type"] = cert.certificate_type
 
@@ -248,6 +255,11 @@ def translate_certificate_transparency(ct_support, ct_data):
     data = []
 
     for item in ct_data:
+        if "not_found" in item:
+            data.append({"not_found": item["not_found"],
+                         "log_id": item["log_id"]})
+            continue
+
         sct_item = {}
         sct_item["version"] = item["version"]
         sct_item["valid"] = item["valid"]
@@ -479,8 +491,13 @@ def signature_hash_layout(value, item_list):
 
 
 def validity_period_layout(value, item_list):
-    msg = value["expires"]
-    del value["expires"]
+    if value.get("expires", None):
+        msg = f"Expires in:  {value['expires']}"
+        del value["expires"]
+    else:
+        msg = f"Expired for:  {value['has_expired']}"
+        del value["has_expired"]
+
     return QStandardItem(msg)
 
 

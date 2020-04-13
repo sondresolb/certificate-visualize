@@ -45,7 +45,7 @@ def check_crl(end_cert, issuer):
     """
     # Check for issuer certificate
     if issuer is None:
-        return (None, {"no_crl": "Can not validate CRL information"
+        return (None, {"no_crl": "Can not validate CRL information "
                        "without the issuer certificate"})
 
     # Fetch CRLs mentioned in the certificate and store with CRL number

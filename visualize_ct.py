@@ -61,6 +61,12 @@ def get_ct_information(end_cert):
             sct_info["entry_type"] = sct["entry_type"]
             ct_information.append(sct_info)
 
+        else:
+            sct["timestamp"] = sct["timestamp"].ctime()
+            sct_info["log_id"] = sct['log_id']
+            sct_info["not_found"] = "Log could not be found from log_id"
+            ct_information.append(sct_info)
+
     return (True, ct_information)
 
 

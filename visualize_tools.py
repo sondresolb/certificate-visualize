@@ -108,8 +108,9 @@ def fetch_certificate_chain(domain, timeout=300):
         return cert_chain, conn_details
 
     except vis_ex.IntermediateFetchingError as ife:
-        print(f"Failed to fetch intermediate certificate: {str(ife)}")
-        return cert_chain, conn_details
+        ife_string = f"Failed to fetch intermediate certificate: {str(ife)}"
+        raise vis_ex.IntermediateFetchingError(
+            ife_string, cert_chain, conn_details)
     except Exception as e:
         raise vis_ex.CertificateFetchingError(textwrap.fill(
             f"Error occured while getting certificates for {domain}: {type(e)}: {e}", 50))
@@ -191,9 +192,6 @@ def validate_certificate_chain(domain, cert_chain, whitelist=None):
             end_entity_cert=der_certs[0], intermediate_certs=der_certs[1:], validation_context=valid_context)
 
         result = cert_validator.validate_tls(domain)
-
-        # for res in result:
-        #     print(res.subject.human_friendly)
 
         return (True, result)
 

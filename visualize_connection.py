@@ -31,7 +31,7 @@ def check_hsts(domain):
 
         if grep_result.stdout:
             items = grep_result.stdout.split(" ")[:2]
-            if items[0] != 'strict-transport-security:':
+            if items[0].lower() != 'strict-transport-security:':
                 return False
 
             hsts = items[0].replace(':', "")
@@ -133,7 +133,7 @@ def get_supported_proto_ciphers(domain, ip, progress_signal):
     except Exception as e:
         raise vis_ex.CipherFetchingError(
             f"Failed while analysing ciphers: {str(e)}", proto_cipher_support
-            ) from e
+        ) from e
 
 
 def get_connection_information(domain, timeout=300):
