@@ -135,21 +135,19 @@ def certificate_scan(domain, signal):
 
     signal_wrap(signal, 84, "analysing protocol and cipher-suite support")
     # *Protocol and cipher support*
-    scan_result["proto_cipher"] = (False, "")
-    # try:
-    #     proto_cipher_result = vis_conn.get_supported_proto_ciphers(
-    #         domain, conn_details["ip"], (signal, 84))
-    #     scan_result["proto_cipher"] = (True, proto_cipher_result)
-    #     print(f"\nProto_ciphers:\n{proto_cipher_result}")
-    # except c_ex.CipherFetchingError as cfe:
-    #     proto_c_err, proto_cipher_result = cfe.args
-    #     scan_result["proto_cipher"] = (False, proto_c_err)
-    #     print(str(cfe))
+    try:
+        proto_cipher_result = vis_conn.get_supported_proto_ciphers(
+            domain, conn_details["ip"], (signal, 84))
+        scan_result["proto_cipher"] = (True, proto_cipher_result)
+        print(f"\nProto_ciphers:\n{proto_cipher_result}")
+    except c_ex.CipherFetchingError as cfe:
+        proto_c_err, proto_cipher_result = cfe.args
+        scan_result["proto_cipher"] = (False, proto_c_err)
+        print(str(cfe))
 
-    # # Add list of supported protocols to connection details
-    # scan_result["connection"]["tls_versions"] = ", ".join(
-    #         list(proto_cipher_result.keys()))
-    scan_result["connection"]["tls_versions"] = []
+    # Add list of supported protocols to connection details
+    scan_result["connection"]["tls_versions"] = ", ".join(
+        list(proto_cipher_result.keys()))
 
     # Indicator if certificate is revoked
     scan_result["cert_revoked"] = crl_revoked and ocsp_revoked
