@@ -1,5 +1,7 @@
 import sys
-from visualize_certificate import Cert_repr
+import time
+
+import visualize_metrics as metrics
 import visualize_tools as vis_tools
 import visualize_ocsp as vis_ocsp
 import visualize_crl as vis_crl
@@ -7,6 +9,7 @@ import visualize_ct as vis_ct
 import visualize_caa as vis_caa
 import visualize_connection as vis_conn
 import visualize_exceptions as c_ex
+from visualize_certificate import Cert_repr
 
 
 # Enables run without signal and fixes gui problem
@@ -162,8 +165,10 @@ def certificate_scan(domain, signal):
         # Skip if there are no extended keyusage
         pass
 
+    # Score results
+    metric_score = metrics.score_results(end_cert, scan_result)
+
     signal_wrap(signal, 100, "analysis completed")
-    import time
     time.sleep(1)
 
     return scan_result
@@ -285,7 +290,7 @@ def run_stress_test(test_domain=None):
 
 
 if __name__ == "__main__":
-    domain = "www.ntnu.no"
-    # certificate_scan(domain, None)
+    domain = "uio.no"
+    certificate_scan(domain, None)
 
-    run_stress_test()
+    # run_stress_test()

@@ -28,3 +28,7 @@ class RequestResponseError(Exception):
 
 class ScanFailureError(Exception):
     pass
+
+
+class EvaluationFailureError(Exception):
+    pass
