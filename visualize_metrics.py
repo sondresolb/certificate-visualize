@@ -3,23 +3,52 @@ import sys
 from visualize_exceptions import EvaluationFailureError
 
 
-def score_results(end_cert, results):
-    total_score = {}
+def evaluate_results(end_cert, results, validation_res):
+    """Evaluation process
 
-    try:
+    Each element of the scan process is broken down into different categories:
+        - The end-entity certificate                    : 35%
+        - Certificate Revocation List (CRL)             : 12%
+        - Online Certificate Status Protocol (OCSP)     : 12%
+        - Certificate Transparency (CT)                 : 5%
+        - Certificate Authority Authorization (CAA)     : 3%
+        - OCSP-Staple                                   : 2%
+        - HTTPS Strict Transport Security (HSTS)        : 8.5%
+        - Protocol and cipher support                   : 22.5%
 
-        total_score["certificate"] = score_end_certificate(end_cert)
+    Each category is then broken down into its most important elements where
+    each elements is given a score from 0-100. Each elements is also weighted
+    with a percentage that adds up to 100%. When each category has been assigned
+    a score, the weigths for each category (seen above) are applied and the result
+    is summed up. This is the total score of the certificate security.
 
-        # After everything is evaluated. apply weights and sum up
-        print(total_score)
-        return None
+    There are several conditions that have to be met in order to assign a complete score.
+    If they are not met, an exception is raised with an explanation of why it failed.
+    If this is the case, the score will be 0.
 
-    except EvaluationFailureError as efe:
-        print(str(efe))
-        return str(efe)
+    If certificate validation has already failed, then the score is also 0.
+    """
+    evaluation_result = {}
+
+    if not validation_res:
+        raise EvaluationFailureError("Certificate validation failure")
+
+    evaluation_result["certificate"] = score_end_certificate(
+        end_cert, results)
+
+    # evaluation_result["crl"] = score_crl(results)
+
+    # After everything is evaluated. apply weights and sum up
+    print(evaluation_result)
+
+    complete_score = 0
+    for score_res in evaluation_result.values():
+        complete_score += score_res[1]
+
+    return (complete_score, evaluation_result)
 
 
-def score_end_certificate(cert):
+def score_end_certificate(cert, results):
     """Evaluate a complete certificate
 
     Signature hash
@@ -28,6 +57,7 @@ def score_end_certificate(cert):
 
     - Evaluation:
         - md2, md5:                 (raise error)
+        - SHA1                      : 0
         - SHA2                      : 80
         - SHA3 etc.                 : 100
 
@@ -53,11 +83,18 @@ def score_end_certificate(cert):
 
     Certificate type
     - Evaluation:
-        - Not indicated             : 60
+        - Not indicated             : 50
         - Domain-validated          : 70
         - Individual-validated      : 80
         - Organization-validated    : 80
         - Extended-validation       : 100
+
+    Revocation_support
+    - Evaluation:
+        - CRL and OCSP              : 100
+        - OCSP                      : 80
+        - CRL                       : 50
+        - None                      : raise
 
     Must-staple
     - Evaluation:
@@ -71,9 +108,10 @@ def score_end_certificate(cert):
     - Certificate is expired
 
     Weights
-    - signature_hash                : 35%
-    - public_key                    : 55%
-    - certificate_type              : 5%
+    - signature_hash                : 30%
+    - public_key                    : 45%
+    - certificate_type              : 3%
+    - revocation_support            : 17% or raise
     - must_staple                   : 5%
     - version                       : raise
     - ct_poison                     : raise
@@ -86,12 +124,15 @@ def score_end_certificate(cert):
         evaluate_has_expired(cert)
         evaluate_ct_poison(cert)
 
-        cert_score["signature_hash"] = evaluate_signature_hash(cert)*0.35
+        cert_score["signature_hash"] = evaluate_cert_signature_hash(cert)*0.30
 
-        cert_score["public_key"] = evaluate_public_key(cert)*0.55
+        cert_score["public_key"] = evaluate_public_key(cert)*0.45
 
         cert_score["certificate_type"] = evaluate_certificate_type(
-            cert)*0.05
+            cert)*0.03
+
+        cert_score["revocation_support"] = evaluate_revocation_support(
+            cert, results)*0.17
 
         cert_score["must_staple"] = evaluate_must_staple(cert)*0.05
 
@@ -115,7 +156,7 @@ def evaluate_certificate_version(cert):
                                      f"in certificate: {cert.subject['commonName']}")
 
 
-def evaluate_signature_hash(cert):
+def evaluate_cert_signature_hash(cert):
     """Signature hash evaluation
 
     The list of hashes in the deprecated list is no longer
@@ -144,7 +185,40 @@ def evaluate_signature_hash(cert):
         return 100
 
 
+def evaluate_revocation_support(cert, results):
+    """Evaluate revocation support
+
+    Online Certificate Protocol (OCSP) and Certificate Revocation List (CRL)
+    are the two methods of revocation found in an end-entity certificate.
+    Having both methods available are good for availability of revocation
+    information. OCSP is the best way to verify that a certificate is not revoked
+    given that it provides timely revocation info and is updated quickly and
+    regularly. CRL is a good alternative, but falls short of the two points above
+    and can get very large. Making the process slower and demanding more resources.
+    The evaluation will fail if there is no revocation methods in the certificate.
+    If that is the case, there is no way to verify if the certificate is safe to use.
+    """
+    crl_support = results["crl"][0]
+    ocsp_support = results["ocsp"][0]
+
+    if crl_support and ocsp_support:
+        return 100
+    elif ocsp_support:
+        return 80
+    elif crl_support:
+        return 50
+    else:
+        raise EvaluationFailureError(
+            f"No revocation methods found in certificate {cert.subject['commonName']}")
+
+
 def evaluate_has_expired(cert):
+    """Evaluate if the certificate is expired
+
+    The evaluation fails if the certificate is expired. An expired certificate can
+    no longer provide any security guarantees and should never be used to secure
+    a connection to a server.
+    """
     has_expired = cert.has_expired
 
     if has_expired:
@@ -153,6 +227,13 @@ def evaluate_has_expired(cert):
 
 
 def evaluate_ct_poison(cert):
+    """Evaluate if certificate contains ct-poison flag
+
+    The evaluation fails if the certificate contains the ct-poison flag. The
+    flag signals that the certificate is actually a pre-certificate used to
+    obtain a complete certificate from a CA or to obtain a Signed Certificate
+    timestamp from a Certificate Transparency log. 
+    """
     ct_poison = cert.ct_poison
 
     if ct_poison:
@@ -172,7 +253,7 @@ def evaluate_certificate_type(cert):
     cert_type = cert.certificate_type
 
     if cert_type == "Not indicated":
-        return 60
+        return 50
     elif cert_type == "Domain-validated":
         return 70
     elif cert_type == "Individual-validated":
@@ -252,4 +333,65 @@ def evaluate_public_key(cert):
 
     # Around 224 bit security level
     elif key_type == "EdDSA448":
+        return 100
+
+
+def score_crl(results):
+    """Evaluate CRL results from end-entity certificate
+
+    The largest publication interval for a crl in one week
+        - source: https://tools.ietf.org/html/rfc5280#page-14
+
+    Each endpoints gets a score and then the mean of scores are calculated.
+
+
+    Number of endpoints (more than one)
+    - Evaluation:
+        - one endpoint                          : 50
+        - two or more                           : 100
+
+    Signature hash
+    - Evaluation:
+        - md2, md5:                             (raise error)
+        - SHA2                                  : 80
+        - SHA3 etc.                             : 100
+
+    Update iterval (next_update - last_update)
+    - Evaluation:
+        - Less or equal to 1 week               : 100
+        - More than 1 week                      : 0
+    """
+    crl_support, _, crl_data = results["crl"]
+
+    crl_endpoints = evaluate_crl_endpoints(crl_data)
+
+    if not crl_support:
+        return 0
+
+
+def evaluate_crl_endpoints(crl_data):
+    """Evaluate crl endpoints
+
+    Assign a score for each crl endpoint and combine them into
+    one score for crl endpoints
+    """
+    endpoint_scores = {}
+
+    for endpoint in crl_data:
+        end_p = endpoint["endpoint"]
+        endpoint_scores[end_p] = {}
+        # do all evaluation for a endpoint here
+
+
+def evaluate_revocation_hash(crl_data):
+    deprecated = ["md2", "md5"]
+
+    crl_hash = crl_data["hash_algorithm"]
+
+    if crl_hash in deprecated:
+        return 0
+
+    if crl_hash == "sha1":
+        return 50
+    else:
         return 100

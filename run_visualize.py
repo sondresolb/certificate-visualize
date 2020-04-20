@@ -165,8 +165,12 @@ def certificate_scan(domain, signal):
         # Skip if there are no extended keyusage
         pass
 
-    # Score results
-    metric_score = metrics.score_results(end_cert, scan_result)
+    # Evaluate results
+    try:
+        evaluation_result = metrics.evaluate_results(
+            end_cert, scan_result, scan_result["validation_path"][0])
+    except c_ex.EvaluationFailureError as efe:
+        evaluation_result = (0, str(efe))
 
     signal_wrap(signal, 100, "analysis completed")
     time.sleep(1)
