@@ -87,8 +87,8 @@ def check_crl(end_cert, issuer):
         hash_algo = crl_info["crl"].signature_hash_algorithm
         crl_info["hash_algorithm"] = (hash_algo.name, hash_algo.digest_size*8)
         crl_info["signature_algorithm"] = crl_info["crl"].signature_algorithm_oid._name
-        crl_info["next_update"] = crl_info["crl"].next_update.ctime()
-        crl_info["last_update"] = crl_info["crl"].last_update.ctime()
+        crl_info["next_update"] = crl_info["crl"].next_update
+        crl_info["last_update"] = crl_info["crl"].last_update
 
         # Do revocation checking of end_cert for all CRLs
         revoked, revocation_info = is_revoked(

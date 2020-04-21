@@ -1,4 +1,5 @@
 import sys
+from datetime import timedelta
 
 from visualize_exceptions import EvaluationFailureError
 
@@ -20,7 +21,7 @@ def evaluate_results(end_cert, results, validation_res):
     each elements is given a score from 0-100. Each elements is also weighted
     with a percentage that adds up to 100%. When each category has been assigned
     a score, the weigths for each category (seen above) are applied and the result
-    is summed up. This is the total score of the certificate security.
+    is summed up. This is the total score of the certificate/SSL security.
 
     There are several conditions that have to be met in order to assign a complete score.
     If they are not met, an exception is raised with an explanation of why it failed.
@@ -28,24 +29,40 @@ def evaluate_results(end_cert, results, validation_res):
 
     If certificate validation has already failed, then the score is also 0.
     """
+    weighted_score = {
+        "certificate":  {"weight": 0.35},
+        "crl":          {"weight": 0.12},
+        "ocsp":         {"weight": 0.12},
+        "ct":           {"weight": 0.05},
+        "caa":          {"weight": 0.03},
+        "staple":       {"weight": 0.02},
+        "hsts":         {"weight": 0.085},
+        "pc":           {"weight": 0.225}
+    }
+
     evaluation_result = {}
 
     if not validation_res:
         raise EvaluationFailureError("Certificate validation failure")
 
-    evaluation_result["certificate"] = score_end_certificate(
+    # Certificate
+    certificate_dict, certificate_score = score_end_certificate(
         end_cert, results)
+    evaluation_result["certificate"] = certificate_dict
+    weighted_score["certificate"]["score"] = certificate_score
 
-    # evaluation_result["crl"] = score_crl(results)
+    # CRL
+    crl_dict, crl_score = score_crl(results)
+    evaluation_result["crl"] = crl_dict
+    weighted_score["crl"]["score"] = crl_score
+
+    # OCSP
 
     # After everything is evaluated. apply weights and sum up
     print(evaluation_result)
+    print(weighted_score)
 
-    complete_score = 0
-    for score_res in evaluation_result.values():
-        complete_score += score_res[1]
-
-    return (complete_score, evaluation_result)
+    return (None, None)
 
 
 def score_end_certificate(cert, results):
@@ -339,11 +356,8 @@ def evaluate_public_key(cert):
 def score_crl(results):
     """Evaluate CRL results from end-entity certificate
 
-    The largest publication interval for a crl in one week
+    The largest publication interval for a crl in 1 week
         - source: https://tools.ietf.org/html/rfc5280#page-14
-
-    Each endpoints gets a score and then the mean of scores are calculated.
-
 
     Number of endpoints (more than one)
     - Evaluation:
@@ -352,7 +366,7 @@ def score_crl(results):
 
     Signature hash
     - Evaluation:
-        - md2, md5:                             (raise error)
+        - md2, md5:                             : 0
         - SHA2                                  : 80
         - SHA3 etc.                             : 100
 
@@ -360,27 +374,62 @@ def score_crl(results):
     - Evaluation:
         - Less or equal to 1 week               : 100
         - More than 1 week                      : 0
+
+    Weights
+    - endpoints                                 : 90%
+    - reliability                               : 10%
     """
     crl_support, _, crl_data = results["crl"]
 
-    crl_endpoints = evaluate_crl_endpoints(crl_data)
-
     if not crl_support:
         return 0
+
+    crl_score = {}
+
+    endpoint_dict, endpoint_score = evaluate_crl_endpoints(crl_data)
+    crl_score["endpoints"] = endpoint_dict
+    endpoint_score = endpoint_score*0.90
+
+    crl_score["reliability"] = evaluate_crl_reliability(crl_data)*0.10
+
+    return (crl_score, sum((endpoint_score, crl_score["reliability"])))
+
+
+def evaluate_crl_reliability(crl_data):
+    if len(crl_data) >= 2:
+        return 100
+    else:
+        return 50
 
 
 def evaluate_crl_endpoints(crl_data):
     """Evaluate crl endpoints
 
-    Assign a score for each crl endpoint and combine them into
-    one score for crl endpoints
+    Assign a score for each crl endpoint and apply weights. Combine them into
+    one score by caluculating the mean.
+
+    Weights
+    - Signature hash                            : 80%
+    - Update interval                           : 20%
     """
     endpoint_scores = {}
 
     for endpoint in crl_data:
         end_p = endpoint["endpoint"]
         endpoint_scores[end_p] = {}
-        # do all evaluation for a endpoint here
+        endpoint_scores[end_p]["signature_hash"] = evaluate_revocation_hash(
+            endpoint)*0.80
+        endpoint_scores[end_p]["update_interval"] = evaluate_update_interval(
+            endpoint)*0.20
+
+    total_score = 0
+    for endpoint in endpoint_scores.values():
+        for item in endpoint.values():
+            total_score += item
+
+    total_score = total_score / len(crl_data)
+
+    return (endpoint_scores, total_score)
 
 
 def evaluate_revocation_hash(crl_data):
@@ -395,3 +444,12 @@ def evaluate_revocation_hash(crl_data):
         return 50
     else:
         return 100
+
+
+def evaluate_update_interval(crl_data):
+    update_interval = crl_data["next_update"] - crl_data["last_update"]
+
+    if update_interval <= timedelta(days=7):
+        return 100
+    else:
+        return 0

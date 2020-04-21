@@ -232,8 +232,8 @@ def translate_crl(crl_support, crl_data):
             crl_item["signature_algorithm"] = item["signature_algorithm"]
             crl_item["signature_hash"] = {
                 "name": item["hash_algorithm"][0], "bits": item["hash_algorithm"][1]}
-            crl_item["last_update"] = item["last_update"]
-            crl_item["next_update"] = item["next_update"]
+            crl_item["last_update"] = item["last_update"].ctime()
+            crl_item["next_update"] = item["next_update"].ctime()
             crl_item["contains_revoked"] = item["has_revoked"]
             if item["has_revoked"]:
                 crl_item["revocation_info"] = item["revocation_info"]
