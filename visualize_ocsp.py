@@ -9,6 +9,7 @@ from cryptography.hazmat.primitives.hashes import SHA1
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
+from cryptography.x509.oid import _SIG_OIDS_TO_HASH
 
 import visualize_exceptions as c_ex
 import visualize_tools as vis_tools
@@ -89,6 +90,10 @@ def check_ocsp(cert, issuer):
 
             endpoint_res["certificate_serial"] = ocsp_response.serial_number
             endpoint_res["signature_algorithm"] = ocsp_response.signature_algorithm_oid._name
+
+            hash_algo = _SIG_OIDS_TO_HASH[ocsp_response.signature_algorithm_oid]
+            endpoint_res["hash_algorithm"] = hash_algo.name if hash_algo is not None else None
+
             endpoint_res["produced_at"] = ocsp_response.produced_at.ctime()
             endpoint_res["this_update"] = ocsp_response.this_update.ctime()
             endpoint_res["next_update"] = ocsp_response.next_update.ctime()

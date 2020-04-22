@@ -57,6 +57,9 @@ def evaluate_results(end_cert, results, validation_res):
     weighted_score["crl"]["score"] = crl_score
 
     # OCSP
+    ocsp_dict, ocsp_score = score_ocsp(results)
+    evaluation_result["ocsp"] = ocsp_dict
+    weighted_score["ocsp"]["score"] = ocsp_score
 
     # After everything is evaluated. apply weights and sum up
     print(evaluation_result)
@@ -382,7 +385,7 @@ def score_crl(results):
     crl_support, _, crl_data = results["crl"]
 
     if not crl_support:
-        return 0
+        return ({"not_supported": 0}, 0)
 
     crl_score = {}
 
@@ -432,15 +435,15 @@ def evaluate_crl_endpoints(crl_data):
     return (endpoint_scores, total_score)
 
 
-def evaluate_revocation_hash(crl_data):
+def evaluate_revocation_hash(revocation_data):
     deprecated = ["md2", "md5"]
 
-    crl_hash = crl_data["hash_algorithm"]
+    revocation_hash = revocation_data["hash_algorithm"]
 
-    if crl_hash in deprecated:
+    if revocation_hash in deprecated:
         return 0
 
-    if crl_hash == "sha1":
+    if revocation_hash == "sha1":
         return 50
     else:
         return 100
@@ -453,3 +456,110 @@ def evaluate_update_interval(crl_data):
         return 100
     else:
         return 0
+
+
+def score_ocsp(results):
+    """Evaluate OCSP results from end-entity certificate
+
+    If the response status is not SUCCESSFUL, an exception is raised and 
+    ocsp is assigned a score of 0.
+
+    Response status
+    - Evaluation:
+        - Not SUCCESSFUL                        : (raise)
+
+    Verification result
+    - If valid is false, but only responder_cert fails, it still passes. If 
+      verification_result['valid'] is False and responder_cert is True, look
+      for the test that failed and raise exception.
+
+    - Evaluation:
+        - Verification failed                   : (raise)
+
+    Signature hash
+    - Evaluation:
+        - md2, md5:                             : 0
+        - SHA2                                  : 80
+        - SHA3 etc.                             : 100
+
+    Weights
+    - Response status                           : raise
+    - Verification result                       : raise
+    - Signature hash                            : 100%
+    """
+
+    ocsp_support, _, ocsp_data = results["ocsp"]
+    # Only one ocsp endpoint is ever given
+    ocsp_data = ocsp_data[0]
+
+    if not ocsp_support:
+        return ({"not_supported": 0}, 0)
+
+    ocsp_score = {}
+
+    try:
+        evaluate_ocsp_response_status(ocsp_data)
+        evaluate_verification_result(ocsp_data)
+        ocsp_score["signature_hash"] = evaluate_revocation_hash(ocsp_data)
+
+        return (ocsp_score, sum(ocsp_score.values()))
+
+    except EvaluationFailureError as efe:
+        return ({"not_evaluated": str(efe)}, 0)
+
+
+def evaluate_ocsp_response_status(ocsp_data):
+    if ocsp_data["response_status"] != "SUCCESSFUL":
+        raise EvaluationFailureError(
+            "OCSP responder failed to serve a response")
+
+
+# Easier access to verification elements
+def get_ocsp_verification_elements(data):
+    elements = {}
+    elements["can_sign"] = data["can_sign"]
+    elements["cert_match"] = data["cert_match"]["passed"]
+    elements["next_update"] = data["next_update"]["passed"]
+    elements["this_update"] = data["this_update"]["passed"]
+    elements["responder_cert"] = data["responder_cert"]["passed"]
+    elements["signature_verified"] = data["signature_verified"]
+    return elements
+
+
+def identify_ocsp_failure(data, skip_keys):
+    for key, value in data.items():
+        if not value and key not in skip_keys:
+            reason = get_ocsp_failure_reason(key)
+            raise EvaluationFailureError(reason)
+
+
+def evaluate_verification_result(ocsp_data):
+    if ocsp_data["verification_result"]["valid"]:
+        return
+
+    verf = ocsp_data["verification_result"]
+    verf_elements = get_ocsp_verification_elements(verf)
+    identify_ocsp_failure(verf_elements, ["responder_cert"])
+
+
+def get_ocsp_failure_reason(failure_key):
+    reasons = {
+        "can_sign":
+        """A certificate was delegated to sign the OCSP response
+without containing an explicit id-kp-OCSPSigning extension""",
+
+        "cert_match":
+        """The certificate serial number in the OCSP response does
+not match the serial number of the certificate beeing checked""",
+
+        "next_update":
+        """The current time is greater than the next_update field""",
+
+        "this_update":
+        """The this_update field is greater than the current time """,
+
+        "signature_verified":
+        """The signature contained in the OCSP response could not be
+verified using any provided verification certificates"""}
+
+    return reasons.get(failure_key, "Unknown")
