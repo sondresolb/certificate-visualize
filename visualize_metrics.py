@@ -46,20 +46,25 @@ def evaluate_results(end_cert, results, validation_res):
         raise EvaluationFailureError("Certificate validation failure")
 
     # Certificate
-    certificate_dict, certificate_score = score_end_certificate(
+    evaluation_result["certificate"], certificate_score = score_end_certificate(
         end_cert, results)
-    evaluation_result["certificate"] = certificate_dict
+    evaluation_result["certificate"]["total"] = certificate_score
     weighted_score["certificate"]["score"] = certificate_score
 
     # CRL
-    crl_dict, crl_score = score_crl(results)
-    evaluation_result["crl"] = crl_dict
+    evaluation_result["crl"], crl_score = score_crl(results)
+    evaluation_result["crl"]["total"] = crl_score
     weighted_score["crl"]["score"] = crl_score
 
     # OCSP
-    ocsp_dict, ocsp_score = score_ocsp(results)
-    evaluation_result["ocsp"] = ocsp_dict
+    evaluation_result["ocsp"], ocsp_score = score_ocsp(results)
+    evaluation_result["ocsp"]["total"] = ocsp_score
     weighted_score["ocsp"]["score"] = ocsp_score
+
+    # CT
+    evaluation_result["ct"], ct_score = score_ct(results)
+    evaluation_result["ct"]["total"] = ct_score
+    weighted_score["ct"]["score"] = ct_score
 
     # After everything is evaluated. apply weights and sum up
     print(evaluation_result)
@@ -389,8 +394,7 @@ def score_crl(results):
 
     crl_score = {}
 
-    endpoint_dict, endpoint_score = evaluate_crl_endpoints(crl_data)
-    crl_score["endpoints"] = endpoint_dict
+    crl_score["endpoints"], endpoint_score = evaluate_crl_endpoints(crl_data)
     endpoint_score = endpoint_score*0.90
 
     crl_score["reliability"] = evaluate_crl_reliability(crl_data)*0.10
@@ -563,3 +567,71 @@ not match the serial number of the certificate beeing checked""",
 verified using any provided verification certificates"""}
 
     return reasons.get(failure_key, "Unknown")
+
+
+def score_ct(results):
+    """Evaluate Certificate Transparency
+
+    If Certificate Transparency is not supported, it will receive a score
+    of 0. If there are two or more good logs, a score of 100 will be assigned
+    for better reliability. If a log is retired, then the SCT timestamp must
+    be less than the log timestamp (SCT issued before log retired).
+
+    usable/readonly/retired logs
+    - Evaluation:
+        - No usable/readonly/retired logs       : 0
+        - 1 usable/readonly/retired log         : 75
+        - 2 or more usable/readonly/retired logs: 100
+
+    - Weight
+        No weights
+    """
+    ct_support, ct_data = results["ct"]
+
+    if not ct_support:
+        return ({"not_supported": 0}, 0)
+
+    ct_score = {}
+
+    ct_score["sct_logs"], sct_logs_score = evaluate_sct(ct_data)
+
+    return (ct_score, sct_logs_score)
+
+
+def evaluate_sct(ct_data):
+    good_states = ["usable", "readonly", "retired"]
+    num_operational = 0
+    total_score = 0
+    sct_score = {}
+
+    for sct in ct_data:
+        log = sct["description"]
+
+        if sct["valid"]:
+            operation_state, timestamp = sct["state"]
+            if operation_state in good_states:
+
+                if operation_state == "retired":
+                    if sct["timestamp"] > timestamp:
+                        sct_score[log] = "SCT was issued after log retirement"
+                        continue
+
+                sct_score[log] = "Good"
+                num_operational += 1
+
+            else:
+                sct_score[log] = "Log is currently not qualified or rejected"
+
+        else:
+            sct_score[log] = "SCT is not valid"
+
+    if num_operational == 0:
+        total_score = 0
+
+    elif num_operational == 1:
+        total_score = 75
+
+    else:
+        total_score = 100
+
+    return (sct_score, total_score)

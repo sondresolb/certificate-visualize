@@ -268,14 +268,14 @@ def translate_certificate_transparency(ct_support, ct_data):
         if err_msg is not None:
             sct_item["error_message"] = err_msg
 
-        sct_item["submitted"] = item["timestamp"]
+        sct_item["submitted"] = item["timestamp"].ctime()
         sct_item["entry_type"] = item["entry_type"]
 
         log_item = {}
         log_item["name"] = item["description"]
         log_item["operator"] = item["operator"]
         log_item["log_state"] = {"log_state": item["state"]
-                                 [0], "timestamp": item["state"][1]}
+                                 [0], "timestamp": item["state"][1].ctime()}
         log_item["log_id"] = item["log_id"]
         log_item["mmd"] = item["mmd"]
         log_item["uri"] = item["url"]
