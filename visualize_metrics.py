@@ -30,14 +30,14 @@ def evaluate_results(end_cert, results, validation_res):
     If certificate validation has already failed, then the score is also 0.
     """
     weighted_score = {
-        "certificate":  {"weight": 0.35},
-        "crl":          {"weight": 0.12},
-        "ocsp":         {"weight": 0.12},
-        "ct":           {"weight": 0.05},
-        "caa":          {"weight": 0.03},
-        "staple":       {"weight": 0.02},
-        "hsts":         {"weight": 0.085},
-        "pc":           {"weight": 0.225}
+        "certificate":      {"weight": 0.35},
+        "crl":              {"weight": 0.12},
+        "ocsp":             {"weight": 0.12},
+        "ct":               {"weight": 0.05},
+        "caa":              {"weight": 0.03},
+        "ocsp_staple":      {"weight": 0.02},
+        "hsts":             {"weight": 0.085},
+        "pc":               {"weight": 0.225}
     }
 
     evaluation_result = {}
@@ -65,6 +65,26 @@ def evaluate_results(end_cert, results, validation_res):
     evaluation_result["ct"], ct_score = score_ct(results)
     evaluation_result["ct"]["total"] = ct_score
     weighted_score["ct"]["score"] = ct_score
+
+    # CAA
+    evaluation_result["caa"], caa_score = score_caa(results)
+    evaluation_result["caa"]["total"] = caa_score
+    weighted_score["caa"]["score"] = caa_score
+
+    # Staple
+    evaluation_result["ocsp_staple"], staple_score = score_staple(results)
+    evaluation_result["ocsp_staple"]["total"] = staple_score
+    weighted_score["ocsp_staple"]["score"] = staple_score
+
+    # HSTS
+    evaluation_result["hsts"], hsts_score = score_hsts(results)
+    evaluation_result["hsts"]["total"] = hsts_score
+    weighted_score["hsts"]["score"] = hsts_score
+
+    # PC (Proto-Cipher)
+    # evaluation_result["pc"], pc_score = score_pc(results)
+    # evaluation_result["pc"]["total"] = pc_score
+    # weighted_score["pc"]["score"] = pc_score
 
     # After everything is evaluated. apply weights and sum up
     print(evaluation_result)
@@ -509,7 +529,7 @@ def score_ocsp(results):
         return (ocsp_score, sum(ocsp_score.values()))
 
     except EvaluationFailureError as efe:
-        return ({"not_evaluated": str(efe)}, 0)
+        return ({"failed_evaluation": str(efe)}, 0)
 
 
 def evaluate_ocsp_response_status(ocsp_data):
@@ -635,3 +655,76 @@ def evaluate_sct(ct_data):
         total_score = 100
 
     return (sct_score, total_score)
+
+
+def score_caa(results):
+    """Evaluate Certificate Authority Authorization
+
+    If CAA is not supported or the record does not contain an
+    issue or issuewild tag, the score is 0. Else, the score is
+    100.
+    """
+    caa_support, caa_data = results["caa"]
+
+    if not caa_support:
+        return ({"not_supported": 0}, 0)
+
+    tags = ["issue", "issuewild"]
+    for entry in caa_data:
+        if entry["tag"] in tags:
+            return ({"supported": 100}, 100)
+
+    else:
+        msg = "CAA record does not contain an issue or wildcard tag"
+        return ({"failed_evaluation": msg}, 0)
+
+
+def score_staple(results):
+    """Evaluate OCSP-Staple
+
+    If OCSP-Staple is not supported or the staple is not valid, the
+    score is 0. Else, the score is 100.
+    """
+    staple_support, valid_staple = results["staple"]
+
+    if not staple_support:
+        return ({"not_supported": 0}, 0)
+
+    else:
+        if valid_staple:
+            return ({"supported": 100}, 100)
+        else:
+            msg = "Staple could not be validated"
+            return ({"failed_evaluation": msg}, 0)
+
+
+def score_hsts(results):
+    """Evaluate HTTP Strict Transport Security
+
+    If hsts is not supported, the score is 0. Else, the score
+    is 100.
+    """
+    hsts_support = results["hsts"]
+
+    if hsts_support:
+        return ({"supported": 100}, 100)
+    else:
+        return ({"not_supported": 0}, 0)
+
+
+def score_pc(results):
+    """Evaluate protocol and cipher support
+
+    Supported protocols
+    - Evaluation:
+
+    Enabled ciphers
+    - Evaluation:
+    """
+    pc_support, pc_data = results["proto_cipher"]
+
+    if not pc_support:
+        return ({"not_supported": 0}, 0)
+
+    supported_protocols = pc_data.keys()
+    print(supported_protocols)
