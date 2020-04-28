@@ -4,7 +4,7 @@ from datetime import timedelta
 from visualize_exceptions import EvaluationFailureError
 
 
-def evaluate_results(validation_path, results, proto_cipher_result):
+def evaluate_results(results, proto_cipher_result):
     """Evaluation process
 
     Each element of the scan process is broken down into different categories:
@@ -47,7 +47,7 @@ def evaluate_results(validation_path, results, proto_cipher_result):
 
     # Certificate
     evaluation_result["Certificate"], certificate_score = score_end_certificate(
-        validation_path, results)
+        results)
     evaluation_result["Certificate"]["total"] = certificate_score
     weighted_score["Certificate"]["score"] = certificate_score
 
@@ -95,7 +95,7 @@ def evaluate_results(validation_path, results, proto_cipher_result):
     return (evaluation_result, evaluation_total)
 
 
-def score_end_certificate(cert_path, results):
+def score_end_certificate(results):
     """Evaluate a complete certificate
 
     Signature hash
@@ -165,13 +165,14 @@ def score_end_certificate(cert_path, results):
     """
     cert_score = {}
 
-    cert = cert_path["end_cert"]
+    validation_path = results["validation_path"][1]
+    cert = validation_path["end_cert"]
 
     try:
         evaluate_certificate_version(cert)
         evaluate_has_expired(cert)
         evaluate_ct_poison(cert)
-        evaluate_intermediate_signature(cert_path["intermediates"])
+        evaluate_intermediate_signature(validation_path["intermediates"])
 
         cert_score["signature_hash"] = evaluate_cert_signature_hash(cert)*0.30
 
@@ -193,9 +194,12 @@ def score_end_certificate(cert_path, results):
 
 
 def evaluate_intermediate_signature(intermediates):
+    deprecated = ["md2", "md5", "sha1"]
+
     for intermediate in intermediates:
-        if intermediate.signature_hash == "sha1":
-            raise EvaluationFailureError(f"SHA1 hash algorithm used to sign intermediate "
+        inter_hash = intermediate.signature_hash[0]
+        if inter_hash in deprecated:
+            raise EvaluationFailureError(f"{inter_hash} hash algorithm used to sign intermediate "
                                          f"certificate: {intermediate.subject['commonName']}")
 
 
