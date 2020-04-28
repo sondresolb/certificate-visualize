@@ -4,7 +4,7 @@ from datetime import timedelta
 from visualize_exceptions import EvaluationFailureError
 
 
-def evaluate_results(end_cert, results, validation_res):
+def evaluate_results(end_cert, results):
     """Evaluation process
 
     Each element of the scan process is broken down into different categories:
@@ -42,7 +42,7 @@ def evaluate_results(end_cert, results, validation_res):
 
     evaluation_result = {}
 
-    if not validation_res:
+    if not results["validation_path"][0]:
         raise EvaluationFailureError("Certificate validation failure")
 
     # Certificate
@@ -82,15 +82,16 @@ def evaluate_results(end_cert, results, validation_res):
     weighted_score["hsts"]["score"] = hsts_score
 
     # PC (Proto-Cipher)
-    # evaluation_result["pc"], pc_score = score_pc(results)
-    # evaluation_result["pc"]["total"] = pc_score
-    # weighted_score["pc"]["score"] = pc_score
+    evaluation_result["pc"], pc_score = score_pc(results)
+    evaluation_result["pc"]["total"] = pc_score
+    weighted_score["pc"]["score"] = pc_score
 
     # After everything is evaluated. apply weights and sum up
-    print(evaluation_result)
-    print(weighted_score)
+    evaluation_total = 0
+    for category, metrics in weighted_score.items():
+        evaluation_total += metrics["score"]*metrics["weight"]
 
-    return (None, None)
+    return (evaluation_result, evaluation_total)
 
 
 def score_end_certificate(cert, results):
@@ -717,14 +718,111 @@ def score_pc(results):
 
     Supported protocols
     - Evaluation:
+        - TLSv1.0                               : 50
+        - TLSv1.1                               : 60
+        - TLSv1.2                               : 90
+        - TLSv1.3                               : 100
 
     Enabled ciphers
     - Evaluation:
+        - Source: https://ciphersuite.info/page/faq/
+
+        - insecure:                             : 0
+            These ciphers are very old and shouldn't be used under any circumstances.
+            Their protection can be broken with minimal effort nowadays.
+
+        - weak:                                 : 50
+            These ciphers are old and should be disabled if you are setting up a
+            new server for example. Make sure to only enable them if you have a 
+            special use case where support for older operating systems, browsers or 
+            applications is required.
+
+        - secure:                               : 80
+            Secure ciphers are considered state-of-the-art and if you want to
+            secure your web server you should certainly choose from this set.
+            Only very old operating systems, browsers or applications are unable
+            to handle them.
+
+        - recommended:                          : 100
+            All 'recommended' ciphers are 'secure' ciphers by definition.
+            Recommended means that these ciphers also support
+            PFS (Perfect Forward Secrecy) and should be your first choice if you
+            want the highest level of security. However, you might run into some
+            compatibility issues with older clients that do not support PFS
+            ciphers.
+
+    - Weights
+        - Supported protocols                   : 70%
+        - Enabled ciphers                       : 30%
     """
     pc_support, pc_data = results["proto_cipher"]
 
     if not pc_support:
         return ({"not_supported": 0}, 0)
 
-    supported_protocols = pc_data.keys()
-    print(supported_protocols)
+    pc_score = {}
+
+    pc_score["protocol_support"], protocol_score = evaluate_supported_protocols(
+        pc_data)
+    protocol_score = protocol_score*0.70
+
+    pc_score["ciphersuite_support"], cipher_score = evaluate_ciphersuites(
+        pc_data)
+    cipher_score = cipher_score*0.30
+
+    total_score = protocol_score + cipher_score
+
+    return (pc_score, total_score)
+
+
+def evaluate_supported_protocols(pc_data):
+    protocol_values = {
+        "TLSv1.0": 50,
+        "TLSv1.1": 60,
+        "TLSv1.2": 90,
+        "TLSv1.3": 100
+    }
+
+    protocols = {}
+
+    for protocol in pc_data.keys():
+        protocols[protocol] = protocol_values[protocol]
+
+    min_protocol = min(protocols, key=protocols.get)
+    max_protocol = max(protocols, key=protocols.get)
+
+    protocol_score = (protocols[max_protocol] + protocols[min_protocol])/2
+
+    protocol_result = {
+        min_protocol: protocols[min_protocol],
+        max_protocol: protocols[max_protocol]
+    }
+
+    return (protocol_result, protocol_score)
+
+
+def evaluate_ciphersuites(pc_data):
+    cipher_values = {
+        "insecure": 0,
+        "weak": 50,
+        "secure": 80,
+        "recommended": 100
+    }
+
+    ciphersuites = {}
+    for protocol, ciphers in pc_data.items():
+        for name, value in ciphers.items():
+            if value != "unknown":
+                ciphersuites[name] = cipher_values[value["security"]]
+
+    min_cipher = min(ciphersuites, key=ciphersuites.get)
+    max_cipher = max(ciphersuites, key=ciphersuites.get)
+
+    cipher_score = (ciphersuites[max_cipher] + ciphersuites[min_cipher])/2
+
+    cipher_result = {
+        min_cipher: ciphersuites[min_cipher],
+        max_cipher: ciphersuites[max_cipher]
+    }
+
+    return (cipher_result, cipher_score)

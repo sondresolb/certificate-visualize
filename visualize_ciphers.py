@@ -10,7 +10,8 @@ def evaluate_cipher(cipher, cipher_info):
 
 def get_cipher_suite_info():
     cipher_info = {}
-    req_url = f"https://ciphersuite.info/api/cs/software/openssl"
+    # req_url = f"https://ciphersuite.info/api/cs/software/openssl"
+    req_url = f"https://ciphersuite.info/api/cs"
 
     try:
         req_res = requests.get(req_url)
@@ -19,14 +20,20 @@ def get_cipher_suite_info():
         complete_cipher_list = json.loads(req_res.content)["ciphersuites"]
 
         for cipher_dict in complete_cipher_list:
-            for _, val in cipher_dict.items():
+            for name, val in cipher_dict.items():
                 items = {}
                 items["security"] = val["security"]
                 items["kex_algorithm"] = val["kex_algorithm"]
                 items["auth_algorithm"] = val["auth_algorithm"]
                 items["enc_algorithm"] = val["enc_algorithm"]
                 items["hash_algorithm"] = val["hash_algorithm"]
-                cipher_info[val["openssl_name"]] = items
+
+                if val["openssl_name"] == "":
+                    cs_name = name
+                else:
+                    cs_name = val["openssl_name"]
+
+                cipher_info[cs_name] = items
 
         return cipher_info
 
