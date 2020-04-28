@@ -4,7 +4,7 @@ from datetime import timedelta
 from visualize_exceptions import EvaluationFailureError
 
 
-def evaluate_results(end_cert, results):
+def evaluate_results(validation_path, results, proto_cipher_result):
     """Evaluation process
 
     Each element of the scan process is broken down into different categories:
@@ -30,14 +30,14 @@ def evaluate_results(end_cert, results):
     If certificate validation has already failed, then the score is also 0.
     """
     weighted_score = {
-        "certificate":      {"weight": 0.35},
-        "crl":              {"weight": 0.12},
-        "ocsp":             {"weight": 0.12},
-        "ct":               {"weight": 0.05},
-        "caa":              {"weight": 0.03},
-        "ocsp_staple":      {"weight": 0.02},
-        "hsts":             {"weight": 0.085},
-        "pc":               {"weight": 0.225}
+        "Certificate":      {"weight": 0.35},
+        "CRL":              {"weight": 0.12},
+        "OCSP":             {"weight": 0.12},
+        "CT":               {"weight": 0.05},
+        "CAA":              {"weight": 0.03},
+        "OCSP_staple":      {"weight": 0.02},
+        "HSTS":             {"weight": 0.085},
+        "Proto_ciphers":    {"weight": 0.225}
     }
 
     evaluation_result = {}
@@ -46,45 +46,46 @@ def evaluate_results(end_cert, results):
         raise EvaluationFailureError("Certificate validation failure")
 
     # Certificate
-    evaluation_result["certificate"], certificate_score = score_end_certificate(
-        end_cert, results)
-    evaluation_result["certificate"]["total"] = certificate_score
-    weighted_score["certificate"]["score"] = certificate_score
+    evaluation_result["Certificate"], certificate_score = score_end_certificate(
+        validation_path, results)
+    evaluation_result["Certificate"]["total"] = certificate_score
+    weighted_score["Certificate"]["score"] = certificate_score
 
     # CRL
-    evaluation_result["crl"], crl_score = score_crl(results)
-    evaluation_result["crl"]["total"] = crl_score
-    weighted_score["crl"]["score"] = crl_score
+    evaluation_result["CRL"], crl_score = score_crl(results)
+    evaluation_result["CRL"]["total"] = crl_score
+    weighted_score["CRL"]["score"] = crl_score
 
     # OCSP
-    evaluation_result["ocsp"], ocsp_score = score_ocsp(results)
-    evaluation_result["ocsp"]["total"] = ocsp_score
-    weighted_score["ocsp"]["score"] = ocsp_score
+    evaluation_result["OCSP"], ocsp_score = score_ocsp(results)
+    evaluation_result["OCSP"]["total"] = ocsp_score
+    weighted_score["OCSP"]["score"] = ocsp_score
 
     # CT
-    evaluation_result["ct"], ct_score = score_ct(results)
-    evaluation_result["ct"]["total"] = ct_score
-    weighted_score["ct"]["score"] = ct_score
+    evaluation_result["CT"], ct_score = score_ct(results)
+    evaluation_result["CT"]["total"] = ct_score
+    weighted_score["CT"]["score"] = ct_score
 
     # CAA
-    evaluation_result["caa"], caa_score = score_caa(results)
-    evaluation_result["caa"]["total"] = caa_score
-    weighted_score["caa"]["score"] = caa_score
+    evaluation_result["CAA"], caa_score = score_caa(results)
+    evaluation_result["CAA"]["total"] = caa_score
+    weighted_score["CAA"]["score"] = caa_score
 
     # Staple
-    evaluation_result["ocsp_staple"], staple_score = score_staple(results)
-    evaluation_result["ocsp_staple"]["total"] = staple_score
-    weighted_score["ocsp_staple"]["score"] = staple_score
+    evaluation_result["OCSP_staple"], staple_score = score_staple(results)
+    evaluation_result["OCSP_staple"]["total"] = staple_score
+    weighted_score["OCSP_staple"]["score"] = staple_score
 
     # HSTS
-    evaluation_result["hsts"], hsts_score = score_hsts(results)
-    evaluation_result["hsts"]["total"] = hsts_score
-    weighted_score["hsts"]["score"] = hsts_score
+    evaluation_result["HSTS"], hsts_score = score_hsts(results)
+    evaluation_result["HSTS"]["total"] = hsts_score
+    weighted_score["HSTS"]["score"] = hsts_score
 
     # PC (Proto-Cipher)
-    evaluation_result["pc"], pc_score = score_pc(results)
-    evaluation_result["pc"]["total"] = pc_score
-    weighted_score["pc"]["score"] = pc_score
+    evaluation_result["Proto_ciphers"], pc_score = score_pc(
+        results, proto_cipher_result)
+    evaluation_result["Proto_ciphers"]["total"] = pc_score
+    weighted_score["Proto_ciphers"]["score"] = pc_score
 
     # After everything is evaluated. apply weights and sum up
     evaluation_total = 0
@@ -94,7 +95,7 @@ def evaluate_results(end_cert, results):
     return (evaluation_result, evaluation_total)
 
 
-def score_end_certificate(cert, results):
+def score_end_certificate(cert_path, results):
     """Evaluate a complete certificate
 
     Signature hash
@@ -103,9 +104,8 @@ def score_end_certificate(cert, results):
 
     - Evaluation:
         - md2, md5:                 (raise error)
-        - SHA1                      : 0
-        - SHA2                      : 80
-        - SHA3 etc.                 : 100
+        - SHA1                      (raise error)
+        - SHA2, SHA3 etc.           : 100
 
     Public key (in bits)
     - Source: https://tools.ietf.org/html/rfc4492#page-3
@@ -148,7 +148,7 @@ def score_end_certificate(cert, results):
         - false                     : 0
 
     Evaluation failure (raise error)
-    - Use of (md2, md5)
+    - Use of (md2, md5, sha1)
     - No revocation information
     - Includes CTpoison extension
     - Certificate is expired
@@ -165,10 +165,13 @@ def score_end_certificate(cert, results):
     """
     cert_score = {}
 
+    cert = cert_path["end_cert"]
+
     try:
         evaluate_certificate_version(cert)
         evaluate_has_expired(cert)
         evaluate_ct_poison(cert)
+        evaluate_intermediate_signature(cert_path["intermediates"])
 
         cert_score["signature_hash"] = evaluate_cert_signature_hash(cert)*0.30
 
@@ -187,6 +190,13 @@ def score_end_certificate(cert, results):
             f"Certificate evaluation failure.\n{str(efe)}")
 
     return (cert_score, sum(cert_score.values()))
+
+
+def evaluate_intermediate_signature(intermediates):
+    for intermediate in intermediates:
+        if intermediate.signature_hash == "sha1":
+            raise EvaluationFailureError(f"SHA1 hash algorithm used to sign intermediate "
+                                         f"certificate: {intermediate.subject['commonName']}")
 
 
 def evaluate_certificate_version(cert):
@@ -211,13 +221,12 @@ def evaluate_cert_signature_hash(cert):
     validity periods signed with sha1. They are excluded from
     this check.
     SHA1 has proven to be insecure and should not be used
-    to sign new certificates. end-user certificates signed with this
-    hash will be given a score of 0.
+    to sign new certificates.
     The other NIST approved hashes for end-user certificate
     signing differ little in tangible security benefit. For this
     reason, they all recieve a score of 100. 
     """
-    deprecated = ["md2", "md5"]
+    deprecated = ["md2", "md5", "sha1"]
 
     sig_hash = cert.signature_hash
 
@@ -225,10 +234,7 @@ def evaluate_cert_signature_hash(cert):
         raise EvaluationFailureError(f"Deprecated hash {sig_hash} used "
                                      f"to sign certificate: {cert.subject['commonName']}")
 
-    if sig_hash == "sha1":
-        return 0
-    else:
-        return 100
+    return 100
 
 
 def evaluate_revocation_support(cert, results):
@@ -396,8 +402,8 @@ def score_crl(results):
     Signature hash
     - Evaluation:
         - md2, md5:                             : 0
-        - SHA2                                  : 80
-        - SHA3 etc.                             : 100
+        - SHA1                                  : 50
+        - SHA2, SHA3 etc.                       : 100
 
     Update iterval (next_update - last_update)
     - Evaluation:
@@ -504,8 +510,8 @@ def score_ocsp(results):
     Signature hash
     - Evaluation:
         - md2, md5:                             : 0
-        - SHA2                                  : 80
-        - SHA3 etc.                             : 100
+        - SHA1                                  : 50
+        - SHA2, SHA3 etc.                       : 100
 
     Weights
     - Response status                           : raise
@@ -713,7 +719,7 @@ def score_hsts(results):
         return ({"not_supported": 0}, 0)
 
 
-def score_pc(results):
+def score_pc(results, proto_cipher_result):
     """Evaluate protocol and cipher support
 
     Supported protocols
@@ -757,10 +763,16 @@ def score_pc(results):
     """
     pc_support, pc_data = results["proto_cipher"]
 
-    if not pc_support:
-        return ({"not_supported": 0}, 0)
-
     pc_score = {}
+
+    if not pc_support:
+        if len(proto_cipher_result.keys()) > 0:
+            pc_score["protocol_support"], protocol_score = evaluate_supported_protocols(
+                proto_cipher_result)
+            protocol_score = protocol_score*0.70
+            return (pc_score, protocol_score)
+        else:
+            return ({"not_supported": 0}, 0)
 
     pc_score["protocol_support"], protocol_score = evaluate_supported_protocols(
         pc_data)
@@ -794,8 +806,8 @@ def evaluate_supported_protocols(pc_data):
     protocol_score = (protocols[max_protocol] + protocols[min_protocol])/2
 
     protocol_result = {
-        min_protocol: protocols[min_protocol],
-        max_protocol: protocols[max_protocol]
+        f"Min: {min_protocol}": protocols[min_protocol],
+        f"Max: {max_protocol}": protocols[max_protocol]
     }
 
     return (protocol_result, protocol_score)
@@ -821,8 +833,8 @@ def evaluate_ciphersuites(pc_data):
     cipher_score = (ciphersuites[max_cipher] + ciphersuites[min_cipher])/2
 
     cipher_result = {
-        min_cipher: ciphersuites[min_cipher],
-        max_cipher: ciphersuites[max_cipher]
+        f"Min: {min_cipher}": ciphersuites[min_cipher],
+        f"Max: {max_cipher}": ciphersuites[max_cipher]
     }
 
     return (cipher_result, cipher_score)

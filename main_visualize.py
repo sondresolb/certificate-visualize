@@ -305,6 +305,14 @@ class Ui_MainWindow(QObject):
             # Did not find a total key usage entry
             pass
 
+        # Evaluation results
+        evaluation_tree, evaluation_score = res["evaluation_result"]
+        translated_evaluation = dt.translate_evaluation(evaluation_tree)
+        dt.fill_data_model(metric_root, translated_evaluation)
+
+        # Set light and score
+        dt.set_evaluation_result(evaluation_score, self.ui)
+
         # resize data_views second column to fit data
         self.ui.data_view.resizeColumnToContents(1)
         # Open display window

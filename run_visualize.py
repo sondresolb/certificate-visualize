@@ -167,11 +167,12 @@ def certificate_scan(domain, signal):
 
     # Evaluate results
     try:
-        evaluation_result = metrics.evaluate_results(end_cert, scan_result)
+        scan_result["evaluation_result"] = metrics.evaluate_results(
+            scan_result["validation_path"], scan_result, proto_cipher_result)
     except c_ex.EvaluationFailureError as efe:
-        evaluation_result = (str(efe), 0)
+        scan_result["evaluation_result"] = (str(efe), -1)
 
-    print(f"\nEVALUATION TOTAL: {evaluation_result[1]}")
+    print(f"\nEVALUATION TOTAL: {scan_result['evaluation_result'][1]}")
 
     signal_wrap(signal, 100, "analysis completed")
     time.sleep(1)

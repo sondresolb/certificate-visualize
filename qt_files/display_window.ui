@@ -171,7 +171,7 @@
             <enum>QFrame::Plain</enum>
            </property>
            <property name="text">
-            <string>0/10</string>
+            <string>0/100</string>
            </property>
            <property name="textFormat">
             <enum>Qt::AutoText</enum>
@@ -310,7 +310,7 @@
           </row>
           <row>
            <property name="text">
-            <string>TLS Version</string>
+            <string>TLS Versions</string>
            </property>
            <property name="toolTip">
             <string>Transport Layer Security

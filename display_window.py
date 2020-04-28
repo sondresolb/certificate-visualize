@@ -181,7 +181,7 @@ class Ui_Form(object):
         _translate = QtCore.QCoreApplication.translate
         Form.setWindowTitle(_translate("Form", "Certificate Display"))
         self.score_name.setText(_translate("Form", "Score:"))
-        self.score.setText(_translate("Form", "0/10"))
+        self.score.setText(_translate("Form", "0/100"))
         item = self.connection_details.verticalHeaderItem(0)
         item.setText(_translate("Form", "IP"))
         item.setToolTip(_translate("Form", "Server IP address"))
@@ -189,7 +189,7 @@ class Ui_Form(object):
         item.setText(_translate("Form", "SN"))
         item.setToolTip(_translate("Form", "Server Name"))
         item = self.connection_details.verticalHeaderItem(2)
-        item.setText(_translate("Form", "TLS Version"))
+        item.setText(_translate("Form", "TLS Versions"))
         item.setToolTip(_translate("Form", "Transport Layer Security\n"
                                    " versions supported by server"))
         item = self.connection_details.verticalHeaderItem(3)

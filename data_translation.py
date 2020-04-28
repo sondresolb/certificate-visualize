@@ -3,7 +3,7 @@ import copy
 import locale
 from datetime import datetime
 from collections import OrderedDict
-from PyQt5 import QtCore, QtWidgets
+from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 from PyQt5.QtCore import Qt
 
@@ -343,6 +343,33 @@ def translate_validation_res(validation_res):
         return {"Path validation": res}
 
 
+def translate_evaluation(evaluation_tree):
+    return {"Evaluation": stringify_extension_value(evaluation_tree)}
+
+
+def set_evaluation_result(evaluation_score, ui):
+    light_path = "qt_files/color_lights/"
+    status_lights = {
+        "red": f"{light_path}red_light.svg",
+        "yellow": f"{light_path}yellow_light.svg",
+        "green": f"{light_path}green_light.svg"
+    }
+
+    gui_score = evaluation_score
+
+    if evaluation_score == -1 or 0 < evaluation_score < 40:
+        ui.status_light.setPixmap(QtGui.QPixmap(status_lights["red"]))
+        gui_score = 0
+
+    elif 40 <= evaluation_score < 60:
+        ui.status_light.setPixmap(QtGui.QPixmap(status_lights["yellow"]))
+
+    elif 60 <= evaluation_score:
+        ui.status_light.setPixmap(QtGui.QPixmap(status_lights["green"]))
+
+    ui.score.setText(f"{round(gui_score, 1)}/100")
+
+
 def stringify_extension_value(extension_value):
     value_type = type(extension_value)
 
@@ -474,6 +501,10 @@ def custom_item_layout(parent, key, value, is_string):
 
         elif key == "Key usages":
             item[1] = QStandardItem(str(len(value)))
+
+        elif parent.text() == "Evaluation":
+            item[1] = QStandardItem(value["total"])
+            del value["total"]
 
         return item
 
