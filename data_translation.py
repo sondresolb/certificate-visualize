@@ -355,19 +355,19 @@ def set_evaluation_result(evaluation_score, ui):
         "green": f"{light_path}green_light.svg"
     }
 
-    gui_score = evaluation_score
+    gui_score = round(evaluation_score, 1)
 
     if evaluation_score == -1 or 0 < evaluation_score < 40:
         ui.status_light.setPixmap(QtGui.QPixmap(status_lights["red"]))
         gui_score = 0
 
-    elif 40 <= evaluation_score < 60:
+    elif 40 <= evaluation_score < 65:
         ui.status_light.setPixmap(QtGui.QPixmap(status_lights["yellow"]))
 
-    elif 60 <= evaluation_score:
+    elif 65 <= evaluation_score:
         ui.status_light.setPixmap(QtGui.QPixmap(status_lights["green"]))
 
-    ui.score.setText(f"{round(gui_score, 1)}/100")
+    ui.score.setText(f"{gui_score}/100")
 
 
 def stringify_extension_value(extension_value):

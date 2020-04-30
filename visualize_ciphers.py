@@ -33,6 +33,10 @@ def get_cipher_suite_info():
                 else:
                     cs_name = val["openssl_name"]
 
+                # Encryption using Cipher Block Chaining capped to weak
+                if items["security"] != "insecure" and "CBC" in items["enc_algorithm"].split(" "):
+                    items["security"] = "weak"
+
                 cipher_info[cs_name] = items
 
         return cipher_info

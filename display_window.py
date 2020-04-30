@@ -127,7 +127,7 @@ class Ui_Form(object):
         self.metric_tree.setIndentation(20)
         self.metric_tree.setAnimated(True)
         self.metric_tree.setObjectName("metric_tree")
-        self.metric_tree.header().setDefaultSectionSize(135)
+        self.metric_tree.header().setDefaultSectionSize(200)
         self.connection_details = QtWidgets.QTableWidget(self.splitter)
         sizePolicy = QtWidgets.QSizePolicy(
             QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)

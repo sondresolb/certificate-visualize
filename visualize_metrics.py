@@ -8,14 +8,14 @@ def evaluate_results(results, proto_cipher_result):
     """Evaluation process
 
     Each element of the scan process is broken down into different categories:
-        - The end-entity certificate                    : 35%
-        - Certificate Revocation List (CRL)             : 12%
-        - Online Certificate Status Protocol (OCSP)     : 12%
-        - Certificate Transparency (CT)                 : 5%
-        - Certificate Authority Authorization (CAA)     : 3%
+        - The end-entity certificate                    : 30%
+        - Certificate Revocation List (CRL)             : 8%
+        - Online Certificate Status Protocol (OCSP)     : 8%
+        - Certificate Transparency (CT)                 : 10%
+        - Certificate Authority Authorization (CAA)     : 8%
         - OCSP-Staple                                   : 2%
-        - HTTPS Strict Transport Security (HSTS)        : 8.5%
-        - Protocol and cipher support                   : 22.5%
+        - HTTPS Strict Transport Security (HSTS)        : 12%
+        - Protocol and cipher support                   : 22%
 
     Each category is then broken down into its most important elements where
     each elements is given a score from 0-100. Each elements is also weighted
@@ -30,14 +30,14 @@ def evaluate_results(results, proto_cipher_result):
     If certificate validation has already failed, then the score is also 0.
     """
     weighted_score = {
-        "Certificate":      {"weight": 0.35},
-        "CRL":              {"weight": 0.12},
-        "OCSP":             {"weight": 0.12},
-        "CT":               {"weight": 0.05},
-        "CAA":              {"weight": 0.03},
+        "Certificate":      {"weight": 0.30},
+        "CRL":              {"weight": 0.08},
+        "OCSP":             {"weight": 0.08},
+        "CT":               {"weight": 0.10},
+        "CAA":              {"weight": 0.08},
         "OCSP_staple":      {"weight": 0.02},
-        "HSTS":             {"weight": 0.085},
-        "Proto_ciphers":    {"weight": 0.225}
+        "HSTS":             {"weight": 0.12},
+        "Proto_ciphers":    {"weight": 0.22}
     }
 
     evaluation_result = {}
@@ -92,7 +92,7 @@ def evaluate_results(results, proto_cipher_result):
     for category, metrics in weighted_score.items():
         evaluation_total += metrics["score"]*metrics["weight"]
 
-    return (evaluation_result, evaluation_total)
+    return (make_percentage(evaluation_result), evaluation_total)
 
 
 def score_end_certificate(results):
@@ -103,9 +103,7 @@ def score_end_certificate(results):
     - Source: https://tools.ietf.org/html/rfc3279 (page 3)
 
     - Evaluation:
-        - md2, md5:                 (raise error)
-        - SHA1                      (raise error)
-        - SHA2, SHA3 etc.           : 100
+        - md2, md5, SHA1:           (raise error)
 
     Public key (in bits)
     - Source: https://tools.ietf.org/html/rfc4492#page-3
@@ -154,15 +152,23 @@ def score_end_certificate(results):
     - Certificate is expired
 
     Weights
-    - signature_hash                : 30%
-    - public_key                    : 45%
-    - certificate_type              : 3%
-    - revocation_support            : 17% or raise
-    - must_staple                   : 5%
+    - public_key                    : 55%
+    - certificate_type              : 5%
+    - revocation_support            : 30% or raise
+    - must_staple                   : 10%
+    - signature_hash                : raise
     - version                       : raise
     - ct_poison                     : raise
     - has_expired                   : raise
+    - intermediate_SHA1_signature   : raise
     """
+    cert_weight = {
+        "public_key":           0.55,
+        "certificate_type":     0.05,
+        "revocation_support":   0.30,
+        "must_staple":          0.10
+    }
+
     cert_score = {}
 
     validation_path = results["validation_path"][1]
@@ -172,25 +178,29 @@ def score_end_certificate(results):
         evaluate_certificate_version(cert)
         evaluate_has_expired(cert)
         evaluate_ct_poison(cert)
+        evaluate_cert_signature_hash(cert)
         evaluate_intermediate_signature(validation_path["intermediates"])
 
-        cert_score["signature_hash"] = evaluate_cert_signature_hash(cert)*0.30
-
-        cert_score["public_key"] = evaluate_public_key(cert)*0.45
+        cert_score["public_key"] = evaluate_public_key(cert)
 
         cert_score["certificate_type"] = evaluate_certificate_type(
-            cert)*0.03
+            cert)
 
         cert_score["revocation_support"] = evaluate_revocation_support(
-            cert, results)*0.17
+            cert, results)
 
-        cert_score["must_staple"] = evaluate_must_staple(cert)*0.05
+        cert_score["must_staple"] = evaluate_must_staple(cert)
 
     except EvaluationFailureError as efe:
         raise EvaluationFailureError(
             f"Certificate evaluation failure.\n{str(efe)}")
 
-    return (cert_score, sum(cert_score.values()))
+    # Apply weights and calculate score
+    evaluation_total = 0
+    for category, metric in cert_score.items():
+        evaluation_total += metric*cert_weight[category]
+
+    return (cert_score, evaluation_total)
 
 
 def evaluate_intermediate_signature(intermediates):
@@ -228,7 +238,7 @@ def evaluate_cert_signature_hash(cert):
     to sign new certificates.
     The other NIST approved hashes for end-user certificate
     signing differ little in tangible security benefit. For this
-    reason, they all recieve a score of 100. 
+    reason, a non-deprecated hash will not affect the certificate score.
     """
     deprecated = ["md2", "md5", "sha1"]
 
@@ -237,8 +247,6 @@ def evaluate_cert_signature_hash(cert):
     if sig_hash[0] in deprecated:
         raise EvaluationFailureError(f"Deprecated hash {sig_hash} used "
                                      f"to sign certificate: {cert.subject['commonName']}")
-
-    return 100
 
 
 def evaluate_revocation_support(cert, results):
@@ -249,8 +257,8 @@ def evaluate_revocation_support(cert, results):
     Having both methods available are good for availability of revocation
     information. OCSP is the best way to verify that a certificate is not revoked
     given that it provides timely revocation info and is updated quickly and
-    regularly. CRL is a good alternative, but falls short of the two points above
-    and can get very large. Making the process slower and demanding more resources.
+    regularly. CRL is a good alternative, but falls short of the two points above.
+    It can get very large and make the process slower while demanding more resources.
     The evaluation will fail if there is no revocation methods in the certificate.
     If that is the case, there is no way to verify if the certificate is safe to use.
     """
@@ -418,6 +426,11 @@ def score_crl(results):
     - endpoints                                 : 90%
     - reliability                               : 10%
     """
+    crl_weights = {
+        "endpoints":        0.90,
+        "reliability":      0.10
+    }
+
     crl_support, _, crl_data = results["crl"]
 
     if not crl_support:
@@ -426,11 +439,12 @@ def score_crl(results):
     crl_score = {}
 
     crl_score["endpoints"], endpoint_score = evaluate_crl_endpoints(crl_data)
-    endpoint_score = endpoint_score*0.90
+    endpoint_score = endpoint_score*crl_weights["endpoints"]
 
-    crl_score["reliability"] = evaluate_crl_reliability(crl_data)*0.10
+    crl_score["reliability"] = evaluate_crl_reliability(crl_data)
+    reliability_score = crl_score["reliability"]*crl_weights["reliability"]
 
-    return (crl_score, sum((endpoint_score, crl_score["reliability"])))
+    return (crl_score, sum((endpoint_score, reliability_score)))
 
 
 def evaluate_crl_reliability(crl_data):
@@ -450,20 +464,25 @@ def evaluate_crl_endpoints(crl_data):
     - Signature hash                            : 80%
     - Update interval                           : 20%
     """
+    endpoint_weights = {
+        "signature_hash":       0.80,
+        "update_interval":      0.20
+    }
+
     endpoint_scores = {}
 
     for endpoint in crl_data:
         end_p = endpoint["endpoint"]
         endpoint_scores[end_p] = {}
         endpoint_scores[end_p]["signature_hash"] = evaluate_revocation_hash(
-            endpoint)*0.80
+            endpoint)
         endpoint_scores[end_p]["update_interval"] = evaluate_update_interval(
-            endpoint)*0.20
+            endpoint)
 
     total_score = 0
     for endpoint in endpoint_scores.values():
-        for item in endpoint.values():
-            total_score += item
+        for name, value in endpoint.items():
+            total_score += value*endpoint_weights[name]
 
     total_score = total_score / len(crl_data)
 
@@ -535,6 +554,7 @@ def score_ocsp(results):
     try:
         evaluate_ocsp_response_status(ocsp_data)
         evaluate_verification_result(ocsp_data)
+
         ocsp_score["signature_hash"] = evaluate_revocation_hash(ocsp_data)
 
         return (ocsp_score, sum(ocsp_score.values()))
@@ -762,9 +782,14 @@ def score_pc(results, proto_cipher_result):
             ciphers.
 
     - Weights
-        - Supported protocols                   : 70%
-        - Enabled ciphers                       : 30%
+        - protocol_support                      : 70%
+        - ciphersuite_support                   : 30%
     """
+    pc_weights = {
+        "protocol_support":     0.70,
+        "ciphersuite_support":  0.30
+    }
+
     pc_support, pc_data = results["proto_cipher"]
 
     pc_score = {}
@@ -773,18 +798,18 @@ def score_pc(results, proto_cipher_result):
         if len(proto_cipher_result.keys()) > 0:
             pc_score["protocol_support"], protocol_score = evaluate_supported_protocols(
                 proto_cipher_result)
-            protocol_score = protocol_score*0.70
+            protocol_score = protocol_score*pc_weights["protocol_support"]
             return (pc_score, protocol_score)
         else:
             return ({"not_supported": 0}, 0)
 
     pc_score["protocol_support"], protocol_score = evaluate_supported_protocols(
         pc_data)
-    protocol_score = protocol_score*0.70
+    protocol_score = protocol_score*pc_weights["protocol_support"]
 
     pc_score["ciphersuite_support"], cipher_score = evaluate_ciphersuites(
         pc_data)
-    cipher_score = cipher_score*0.30
+    cipher_score = cipher_score*pc_weights["ciphersuite_support"]
 
     total_score = protocol_score + cipher_score
 
@@ -819,10 +844,10 @@ def evaluate_supported_protocols(pc_data):
 
 def evaluate_ciphersuites(pc_data):
     cipher_values = {
-        "insecure": 0,
-        "weak": 50,
-        "secure": 80,
-        "recommended": 100
+        "insecure":     0,
+        "weak":         50,
+        "secure":       80,
+        "recommended":  100
     }
 
     ciphersuites = {}
@@ -842,3 +867,15 @@ def evaluate_ciphersuites(pc_data):
     }
 
     return (cipher_result, cipher_score)
+
+
+def make_percentage(score):
+    if isinstance(score, dict):
+        for name, value in score.items():
+            score[name] = make_percentage(value)
+
+    if isinstance(score, (int, float)):
+
+        return f"{float(score)}%"
+
+    return score
