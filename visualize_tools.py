@@ -2,7 +2,9 @@ import idna
 import pem
 import requests
 import certifi
+import textwrap
 from socket import socket
+from datetime import datetime
 
 import visualize_exceptions as vis_ex
 from visualize_certificate import Cert_repr
@@ -46,6 +48,7 @@ def fetch_certificate_chain(domain, timeout=300):
 
     Returns:
         cert_chain (list): sorted list of cert_repr objects
+        conn_details (dict): connection information
 
     Raises:
         (visualize_exceptions.NoCertificatesError):
@@ -58,8 +61,8 @@ def fetch_certificate_chain(domain, timeout=300):
             If the connection failed, parsing failed or any other
             exception occured during the fetching.
     """
+    conn_details = {"date": get_scan_date()}
     certificates = []
-    conn_details = {}
 
     hostname = idna.encode(domain)
     # SSL.TLSv1_2_METHOD, SSL.SSLv23_METHOD
@@ -105,11 +108,13 @@ def fetch_certificate_chain(domain, timeout=300):
         return cert_chain, conn_details
 
     except vis_ex.IntermediateFetchingError as ife:
-        print(f"Failed to fetch intermediate certificate: {str(ife)}")
-        return cert_chain, conn_details
+        ife_string = f"Failed to fetch intermediate certificate: {str(ife)}"
+        raise vis_ex.IntermediateFetchingError(
+            ife_string, cert_chain, conn_details)
     except Exception as e:
-        raise vis_ex.CertificateFetchingError(
-            f"Error occured while getting certificates for {domain}: {type(e)}: {e}") from e
+        raise vis_ex.CertificateFetchingError(textwrap.fill(
+            f"Error occured while getting certificates for {domain}: {type(e)}: {e}", 50))
+
     finally:
         s.close()
 
@@ -187,9 +192,6 @@ def validate_certificate_chain(domain, cert_chain, whitelist=None):
             end_entity_cert=der_certs[0], intermediate_certs=der_certs[1:], validation_context=valid_context)
 
         result = cert_validator.validate_tls(domain)
-
-        # for res in result:
-        #     print(res.subject.human_friendly)
 
         return (True, result)
 
@@ -309,19 +311,9 @@ def get_full_validation_path(validation_path):
             parsed_cert = Cert_repr(crypto.X509.from_cryptography(x509.load_der_x509_certificate(
                 v_cert.dump(), default_backend())))
 
-            info = {}
-            info["common_name"] = parsed_cert.subject["commonName"]
-            info["issuer"] = parsed_cert.issuer["commonName"]
-            info["validity_period"] = parsed_cert.validity_period
-            pub_key = f"{parsed_cert.public_key['type']} {parsed_cert.public_key['size']} bits"
-            info["public_key"] = pub_key
-            info["signature_algo"] = parsed_cert.signature_algorithm
-            info["serial_number"] = parsed_cert.serial_number
-            info["fingerprint_sha256"] = parsed_cert.fingerprint["SHA256"]
-            parsed_list.append(info)
+            parsed_list.append(parsed_cert)
 
     except Exception as e:
-        print(f"Failed here {e}")
         parsed_list.append("Failed to parse")
 
     parsed_list.reverse()
@@ -397,50 +389,9 @@ def sort_chain(cert_chain, domain):
             f"{[(c.subject['commonName'], c.issuer['commonName']) for c in cert_chain]}")
 
 
-def has_ct_poison(end_cert):
-    """Check if a certificate includes the ctPoison extension
-
-    If a certificate includes the ctPoison extension, it should not
-    be used for any purposed carried out by a complete x509 certificate.
-    A certificate including this extension is a pre-certificate meant to
-    be issued to a certificate transparency log.
-
-    Args:
-        end_cert (Cert_repr): The certificate to check for extension in
-
-    Returns:
-        tuple(bool, extension or None):
-            The first element indicates if the certificate includes the
-            extension or not. The second element can contain the extension
-            itself or None if it is not present.
-
-    """
-    poison_ext = end_cert.extensions.get("ctPoison", None)
-    return poison_ext is not None
-
-
-# Checking if the TLSFeature extension is present
-def has_ocsp_must_staple(end_cert):
-    tls_feature = end_cert.extensions.get("TLSFeature", None)
-    return tls_feature is not None
-
-
-# Checking policy oids for a match agains type oids
-def get_certificate_type(end_cert):
-    policy_ext = end_cert.extensions.get("certificatePolicies", None)
-    if policy_ext is None:
-        return 'Not indicated'
-
-    if '2.23.140.1.2.3' in policy_ext["value"]:
-        return ('Individual-validated')
-    elif '2.23.140.1.2.1' in policy_ext["value"]:
-        return 'Domain-validated'
-    elif '2.23.140.1.2.2' in policy_ext["value"]:
-        return 'Organization-validated'
-    elif '2.23.140.1.1' in policy_ext["value"]:
-        return 'Extended-validation'
-    else:
-        return 'Not indicated'
+def get_scan_date():
+    today = datetime.now()
+    return today.strftime("%d-%m-%Y %H:%M:%S")
 
 
 def rep_cert(cert_obj):

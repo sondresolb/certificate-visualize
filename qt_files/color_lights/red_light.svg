@@ -1,0 +1,31 @@
+<svg width="128" height="128" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <defs>
+  <linearGradient id="linearGradient2816">
+   <stop stop-color="#b00000" id="stop2818" offset="0"/>
+   <stop stop-color="#ffffff" id="stop2820" offset="1"/>
+  </linearGradient>
+  <linearGradient id="linearGradient2794">
+   <stop stop-color="#545454" id="stop2796" offset="0"/>
+   <stop stop-color="#545454" id="stop2804" offset="0.94643"/>
+   <stop stop-color="#c5c5c5" stop-opacity="0" id="stop2798" offset="1"/>
+  </linearGradient>
+  <linearGradient id="linearGradient2760">
+   <stop stop-color="#ff0000" id="stop2762" offset="0"/>
+   <stop stop-color="#a20000" id="stop2768" offset="0.61161"/>
+   <stop stop-color="#ff6666" id="stop2764" offset="1"/>
+  </linearGradient>
+  <linearGradient xlink:href="#linearGradient2760" id="linearGradient2766" y2="-0.0173" x2="-0.0173" y1="1.0173" x1="-0.0173"/>
+  <radialGradient gradientUnits="userSpaceOnUse" xlink:href="#linearGradient2794" id="radialGradient2812" fy="65.01588" fx="62.98413" r="54.17989" cy="65.01588" cx="62.98413"/>
+  <linearGradient xlink:href="#linearGradient2816" id="linearGradient2822" y2="0" x2="0" y1="1" x1="0"/>
+ </defs>
+ <g>
+  <title>background</title>
+  <rect fill="none" id="canvas_background" height="402" width="582" y="-1" x="-1"/>
+ </g>
+ <g>
+  <title>Layer 1</title>
+  <path fill="url(#radialGradient2812)" fill-rule="nonzero" stroke-width="3.75" stroke-linejoin="round" stroke-miterlimit="4" stroke-dashoffset="0" id="path2790" d="m122.88888,69.04762c0,29.92273 -24.25716,54.17989 -54.17989,54.17989c-29.92273,0 -54.1799,-24.25716 -54.1799,-54.17989c0,-29.92273 24.25717,-54.1799 54.1799,-54.1799c29.92273,0 54.17989,24.25717 54.17989,54.1799z"/>
+  <path fill="url(#linearGradient2766)" fill-rule="nonzero" stroke="#740000" stroke-width="3.75" stroke-linejoin="round" stroke-miterlimit="4" stroke-dashoffset="0" id="path1873" d="m118.85714,65.01588c0,29.92273 -24.25716,54.17989 -54.17989,54.17989c-29.92273,0 -54.1799,-24.25716 -54.1799,-54.17989c0,-29.92273 24.25717,-54.1799 54.1799,-54.1799c29.92273,0 54.17989,24.25717 54.17989,54.1799z"/>
+  <path fill="url(#linearGradient2822)" fill-rule="nonzero" stroke-width="3.75" stroke-linejoin="round" stroke-miterlimit="4" stroke-dashoffset="0" id="path2814" d="m96.5,39.5c0,14.08326 -14.32689,25.5 -32,25.5c-17.67311,0 -32,-11.41674 -32,-25.5c0,-14.08326 14.32689,-25.5 32,-25.5c17.67311,0 32,11.41674 32,25.5z"/>
+ </g>
+</svg>

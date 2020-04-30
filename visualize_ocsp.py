@@ -9,6 +9,7 @@ from cryptography.hazmat.primitives.hashes import SHA1
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
+from cryptography.x509.oid import _SIG_OIDS_TO_HASH
 
 import visualize_exceptions as c_ex
 import visualize_tools as vis_tools
@@ -61,7 +62,7 @@ def check_ocsp(cert, issuer):
                 ocsp_endpoints.append((host, ocsp_endpoint))
 
     if not ocsp_endpoints:
-        return (False, [{"no_ocsp": "No OCSP enpoint was found"}])
+        return (False, None, "No OCSP enpoint found in End-user Certificate")
 
     req = build_ocsp_request(cert, issuer)
 
@@ -79,16 +80,20 @@ def check_ocsp(cert, issuer):
 
         endpoint_res["response_status"] = ocsp_response.response_status.name
         if endpoint_res["response_status"] == 'SUCCESSFUL':
+            endpoint_res["certificate_status"] = ocsp_response.certificate_status.name
+            endpoint_res["certificate_status_msg"] = get_res_message(
+                endpoint_res["certificate_status"])
 
             # Verify ocsp response signature
             endpoint_res["verification_result"] = validate_ocsp_response(
                 host, ocsp_response, issuer, cert.serial_number)
 
-            endpoint_res["certificate_status"] = ocsp_response.certificate_status.name
-            endpoint_res["certificate_status_msg"] = get_res_message(
-                endpoint_res["certificate_status"])
             endpoint_res["certificate_serial"] = ocsp_response.serial_number
             endpoint_res["signature_algorithm"] = ocsp_response.signature_algorithm_oid._name
+
+            hash_algo = _SIG_OIDS_TO_HASH[ocsp_response.signature_algorithm_oid]
+            endpoint_res["hash_algorithm"] = hash_algo.name if hash_algo is not None else None
+
             endpoint_res["produced_at"] = ocsp_response.produced_at.ctime()
             endpoint_res["this_update"] = ocsp_response.this_update.ctime()
             endpoint_res["next_update"] = ocsp_response.next_update.ctime()
@@ -189,7 +194,7 @@ def validate_ocsp_response(host, ocsp_response, issuer, cert_serial_number, hc=T
     checks_passed = True
 
     # Check that the certificate in question is the same as in the ocsp response
-    validation_result["cert_match"] = {"passed": True, "message": ""}
+    validation_result["cert_match"] = {"passed": True}
     if ocsp_response.serial_number != cert_serial_number:
         checks_passed = False
         validation_result["cert_match"]["passed"] = False
@@ -197,7 +202,7 @@ def validate_ocsp_response(host, ocsp_response, issuer, cert_serial_number, hc=T
             "Certificate beeing checked does not match certificate in response")
 
     # Check that the current time is greater than next_update field in the response
-    validation_result["next_update"] = {"passed": True, "message": ""}
+    validation_result["next_update"] = {"passed": True}
     if datetime.datetime.now() > ocsp_response.next_update:
         checks_passed = False
         validation_result["next_update"]["passed"] = False
@@ -205,7 +210,7 @@ def validate_ocsp_response(host, ocsp_response, issuer, cert_serial_number, hc=T
             "OCSP next_update is earlier than local system time")
 
     # Check that the current time is less than this_update field in the response
-    validation_result["this_update"] = {"passed": True, "message": ""}
+    validation_result["this_update"] = {"passed": True}
     if datetime.datetime.now() < ocsp_response.this_update:
         checks_passed = False
         validation_result["this_update"]["passed"] = False
@@ -214,7 +219,7 @@ def validate_ocsp_response(host, ocsp_response, issuer, cert_serial_number, hc=T
 
     # Validate the OCSP responder certificate chain
     if hc:
-        validation_result["responder_cert"] = {"passed": True, "message": ""}
+        validation_result["responder_cert"] = {"passed": True}
         responder_valid, responder_res = validate_ocsp_responder(host)
         if not responder_valid:
             checks_passed = False
@@ -237,7 +242,8 @@ def validate_ocsp_response(host, ocsp_response, issuer, cert_serial_number, hc=T
         key_certs, signature_bytes, tbs_bytes, sig_hash_algo)
 
     validation_result["signature_verified"] = valid
-    validation_result["verification_cert"] = cert
+    validation_result["verification_cert"] = cert.subject.get_attributes_for_oid(
+        cryptography_x509.oid.NameOID.COMMON_NAME)[0].value
 
     # OCSP signing delegation must be explicit with id-kp-OCSPSigning extension
     if cert is not None:
@@ -247,6 +253,7 @@ def validate_ocsp_response(host, ocsp_response, issuer, cert_serial_number, hc=T
                 extended_keyusage = cert.extensions.get_extension_for_oid(
                     ext_keyusage_oid).value
             except cryptography_x509.extensions.ExtensionNotFound:
+                validation_result["message"] = "Validation failure: Signing delegation not specified"
                 return validation_result
 
             if any(keyusage.dotted_string == ("1.3.6.1.5.5.7.3.9")
@@ -334,7 +341,8 @@ def validate_ocsp_responder(host):
 
 def is_certificate_revoked(responses):
     for response in responses:
-        if response["certificate_status"] == 'REVOKED':
+        res = response.get("certificate_status", None)
+        if res == 'REVOKED':
             return True
     else:
         return False

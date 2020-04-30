@@ -50,15 +50,23 @@ def get_ct_information(end_cert):
             sct_info["email"] = operator["email"][0]
             sct_info["description"] = log_info["description"]
             sct_info["version"] = sct["version"]
-            sct_info["log_id"] = sct_log_id
+            sct_info["log_id"] = sct['log_id']
             sct_info["url"] = log_info["url"]
             sct_info["mmd"] = log_info["mmd"]
             state = next(iter(log_info["state"]))
-            sct_info["state"] = (state, log_info["state"][state]["timestamp"])
-            sct_info["timestamp"] = sct["timestamp"].ctime()
+            log_timestamp = datetime.datetime.strptime(
+                log_info["state"][state]["timestamp"], "%Y-%m-%dT%H:%M:%SZ")
+            sct_info["state"] = (state, log_timestamp)
+            sct_info["timestamp"] = sct["timestamp"]
             # Setting timestamp in extension to ctime
             sct["timestamp"] = sct["timestamp"].ctime()
             sct_info["entry_type"] = sct["entry_type"]
+            ct_information.append(sct_info)
+
+        else:
+            sct["timestamp"] = sct["timestamp"].ctime()
+            sct_info["log_id"] = sct['log_id']
+            sct_info["not_found"] = "Log could not be found from log_id"
             ct_information.append(sct_info)
 
     return (True, ct_information)

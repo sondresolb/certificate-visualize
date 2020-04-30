@@ -45,7 +45,7 @@ def check_crl(end_cert, issuer):
     """
     # Check for issuer certificate
     if issuer is None:
-        return (None, {"no_crl": "Can not validate CRL information"
+        return (None, {"no_crl": "Can not validate CRL information "
                        "without the issuer certificate"})
 
     # Fetch CRLs mentioned in the certificate and store with CRL number
@@ -80,14 +80,15 @@ def check_crl(end_cert, issuer):
 
     certificate_revoked = False
     for crl_info in valid_crls:
-        crl_info["issuer"] = crl_info["crl"].issuer
+        crl_info["issuer"] = crl_info["crl"].issuer.get_attributes_for_oid(
+            x509.oid.NameOID.COMMON_NAME)[0].value
         # Add delta CRL indicator to all CRLs
         crl_info["is_delta"] = is_delta(crl_info["crl"])
         hash_algo = crl_info["crl"].signature_hash_algorithm
-        crl_info["hash_algorithm"] = (hash_algo.name, hash_algo.digest_size)
+        crl_info["hash_algorithm"] = (hash_algo.name, hash_algo.digest_size*8)
         crl_info["signature_algorithm"] = crl_info["crl"].signature_algorithm_oid._name
-        crl_info["next_update"] = crl_info["crl"].next_update.ctime()
-        crl_info["last_update"] = crl_info["crl"].last_update.ctime()
+        crl_info["next_update"] = crl_info["crl"].next_update
+        crl_info["last_update"] = crl_info["crl"].last_update
 
         # Do revocation checking of end_cert for all CRLs
         revoked, revocation_info = is_revoked(

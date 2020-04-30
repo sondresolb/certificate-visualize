@@ -1,0 +1,31 @@
+<svg width="128" height="128" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <defs>
+  <linearGradient id="linearGradient2816">
+   <stop offset="0" id="stop2818" stop-color="#b0b000"/>
+   <stop offset="1" id="stop2820" stop-color="#ffffff"/>
+  </linearGradient>
+  <linearGradient id="linearGradient2794">
+   <stop offset="0" id="stop2796" stop-color="#545454"/>
+   <stop offset="0.94643" id="stop2804" stop-color="#545454"/>
+   <stop offset="1" id="stop2798" stop-opacity="0" stop-color="#c5c5c5"/>
+  </linearGradient>
+  <linearGradient id="linearGradient2760">
+   <stop offset="0" id="stop2762" stop-color="#ffff00"/>
+   <stop offset="0.61161" id="stop2768" stop-color="#a2a200"/>
+   <stop offset="1" id="stop2764" stop-color="#ffff66"/>
+  </linearGradient>
+  <linearGradient x1="-0.0173" y1="1.0173" x2="-0.0173" y2="-0.0173" id="linearGradient2766" xlink:href="#linearGradient2760"/>
+  <radialGradient cx="62.98413" cy="65.01588" r="54.17989" fx="62.98413" fy="65.01588" id="radialGradient2812" xlink:href="#linearGradient2794" gradientUnits="userSpaceOnUse"/>
+  <linearGradient x1="0" y1="1" x2="0" y2="0" id="linearGradient2822" xlink:href="#linearGradient2816"/>
+ </defs>
+ <g>
+  <title>background</title>
+  <rect x="-1" y="-1" width="33.99935" height="33.99935" id="canvas_background" fill="none"/>
+ </g>
+ <g>
+  <title>Layer 1</title>
+  <path d="m122.88888,69.04762c0,29.92273 -24.25716,54.17989 -54.17989,54.17989c-29.92273,0 -54.1799,-24.25716 -54.1799,-54.17989c0,-29.92273 24.25717,-54.1799 54.1799,-54.1799c29.92273,0 54.17989,24.25717 54.17989,54.1799z" id="path2790" stroke-dashoffset="0" stroke-miterlimit="4" stroke-linejoin="round" stroke-width="3.75" fill-rule="nonzero" fill="url(#radialGradient2812)"/>
+  <path d="m118.85714,65.01588c0,29.92273 -24.25716,54.17989 -54.17989,54.17989c-29.92273,0 -54.1799,-24.25716 -54.1799,-54.17989c0,-29.92273 24.25717,-54.1799 54.1799,-54.1799c29.92273,0 54.17989,24.25717 54.17989,54.1799z" id="path1873" stroke-dashoffset="0" stroke-miterlimit="4" stroke-linejoin="round" stroke-width="3.75" stroke="#74741a" fill-rule="nonzero" fill="url(#linearGradient2766)"/>
+  <path d="m96.5,39.5c0,14.08326 -14.32689,25.5 -32,25.5c-17.67311,0 -32,-11.41674 -32,-25.5c0,-14.08326 14.32689,-25.5 32,-25.5c17.67311,0 32,11.41674 32,25.5z" id="path2814" stroke-dashoffset="0" stroke-miterlimit="4" stroke-linejoin="round" stroke-width="3.75" fill-rule="nonzero" fill="url(#linearGradient2822)"/>
+ </g>
+</svg>

@@ -2,6 +2,7 @@ import idna
 import subprocess
 from socket import socket
 from OpenSSL import SSL, crypto
+import visualize_ciphers as vis_ciphers
 import visualize_exceptions as vis_ex
 
 
@@ -30,7 +31,7 @@ def check_hsts(domain):
 
         if grep_result.stdout:
             items = grep_result.stdout.split(" ")[:2]
-            if items[0] != 'strict-transport-security:':
+            if items[0].lower() != 'strict-transport-security:':
                 return False
 
             hsts = items[0].replace(':', "")
@@ -46,7 +47,7 @@ def check_hsts(domain):
         return False
 
 
-def get_proto_cipher_support(domain, ip):
+def get_supported_proto_ciphers(domain, ip, progress_signal):
     """Determine enabled ciphers on server
 
     Function for determining the enabled ciphers for each
@@ -64,6 +65,9 @@ def get_proto_cipher_support(domain, ip):
 
     Returns:
         proto_cipher_support (dict): Every cipher supported for each protocol
+
+    Raises:
+        vis_ex.CipherFetchingError: If an error occures during fetching
     """
     str_ip = str(ip)
     supported_protocols = {}
@@ -82,36 +86,62 @@ def get_proto_cipher_support(domain, ip):
         if info["supported"] and info["protocol"] in protocol_map:
             supported_protocols[info["protocol"]
                                 ] = protocol_map[info["protocol"]]
-            proto_cipher_support[info["protocol"]] = []
+            proto_cipher_support[info["protocol"]] = {}
 
     try:
+        # TLSv1.3 cipher-suites not included in openssl list
+        missing_ciphers = ["TLS_AES_128_CCM_SHA256",
+                           "TLS_AES_128_CCM_8_SHA256"]
+
+        cipher_info = vis_ciphers.get_cipher_suite_info()
         cipher_list = subprocess.run(
             ["openssl", "ciphers", "ALL:eNULL"], capture_output=True, text=True)
 
         all_ciphers = cipher_list.stdout.split(":")
         all_ciphers[-1] = all_ciphers[-1].replace("\n", "")
+        all_ciphers.extend(missing_ciphers)
 
+        signal, c_progress = progress_signal
+        progress_left = (100 - c_progress) - 1
+        progress_add = progress_left / len(supported_protocols)
         for p_protocol, o_protocol in supported_protocols.items():
+            c_progress += progress_add
+            signal_wrap(signal, c_progress,
+                        f"testing {p_protocol} cipher support")
+
+            cipher_flag = "-ciphersuites" if p_protocol == "TLSv1.3" else "-cipher"
+
             for cipher in all_ciphers:
                 try:
+
                     call = (
-                        f"openssl s_client -connect {str_ip}:443 -cipher {cipher} "
+                        f"openssl s_client -connect {str_ip}:443 {cipher_flag} {cipher} "
                         f"-{o_protocol} < /dev/null > /dev/null 2>&1")
 
                     proto_cipher = subprocess.run(
                         call, timeout=3, capture_output=True, shell=True, text=True)
 
                     if proto_cipher.returncode == 0:
-                        proto_cipher_support[p_protocol].append(cipher)
+                        security = vis_ciphers.evaluate_cipher(
+                            cipher, cipher_info)
+                        proto_cipher_support[p_protocol][cipher] = security
 
                 except subprocess.TimeoutExpired:
                     pass
+
+        for proto_c, c_val in proto_cipher_support.items():
+            if len(c_val) > 0:
+                break
+        else:
+            raise vis_ex.CipherFetchingError(
+                "Unable to extract cipher information from server")
 
         return proto_cipher_support
 
     except Exception as e:
         raise vis_ex.CipherFetchingError(
-            "Failed to extract cipher list from OpenSSL") from e
+            f"Failed while analysing ciphers: {str(e)}", proto_cipher_support
+        ) from e
 
 
 def get_connection_information(domain, timeout=300):
@@ -129,9 +159,7 @@ def get_connection_information(domain, timeout=300):
             connection gets closed
 
     Returns:
-        tuple(server_ip, server_info):
-            server_ip describes the ip of the server (IPv4)
-            server_info is a list of dicts containing server info
+        connection_info (list): list of dicts containing protocol info
     """
     connection_info = []
 
@@ -183,3 +211,10 @@ def get_connection_information(domain, timeout=300):
             s.close()
 
     return connection_info
+
+
+def signal_wrap(signal, percent, text):
+    try:
+        signal.emit(percent, text)
+    except Exception:
+        pass

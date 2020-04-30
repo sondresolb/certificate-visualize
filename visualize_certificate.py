@@ -29,6 +29,9 @@ class Cert_repr:
         self.public_key = None
         self.extensions = None
         self.fingerprint = None
+        self.certificate_type = None
+        self.must_staple = None
+        self.ct_poison = None
         self.initilize_cert()
 
     def initilize_cert(self):
@@ -44,6 +47,9 @@ class Cert_repr:
         self.public_key = self.set_public_key()
         self.extensions = self.set_extensions()
         self.fingerprint = self.set_fingerprint()
+        self.certificate_type = self.set_certificate_type()
+        self.must_staple = self.set_ocsp_must_staple()
+        self.ct_poison = self.set_ct_poison()
 
     # Distinguished Name from x.509.Name object as a dict
     def set_dn(self, cert_name):
@@ -76,8 +82,8 @@ class Cert_repr:
 
     # Returns tuple(not_valid_before, not_valid_after)
     def set_validity_period(self):
-        not_before = self.crypto_cert.not_valid_before.ctime()
-        not_after = self.crypto_cert.not_valid_after.ctime()
+        not_before = self.crypto_cert.not_valid_before
+        not_after = self.crypto_cert.not_valid_after
         return (not_before, not_after)
 
     def set_public_key(self):
@@ -126,6 +132,45 @@ class Cert_repr:
             hashes.SHA256()).hex()
 
         return fingerprint
+
+    # Checking policy oids for a match agains type oids
+    def set_certificate_type(self):
+        policy_ext = self.extensions.get("certificatePolicies", None)
+        if policy_ext is None:
+            return 'Not indicated'
+
+        if '2.23.140.1.2.3' in policy_ext["value"]:
+            return 'Individual-validated'
+        elif '2.23.140.1.2.1' in policy_ext["value"]:
+            return 'Domain-validated'
+        elif '2.23.140.1.2.2' in policy_ext["value"]:
+            return 'Organization-validated'
+        elif '2.23.140.1.1' in policy_ext["value"]:
+            return 'Extended-validation'
+        else:
+            return 'Not indicated'
+
+    # Checking if the TLSFeature extension is present
+    def set_ocsp_must_staple(self):
+        tls_feature = self.extensions.get("TLSFeature", None)
+        return tls_feature is not None
+
+    def set_ct_poison(self):
+        """Check if a certificate includes the ctPoison extension
+
+        If a certificate includes the ctPoison extension, it should not
+        be used for any purposed carried out by a complete x509 certificate.
+        A certificate including this extension is a pre-certificate meant to
+        be issued to a certificate transparency log.
+
+        Args:
+            self (Cert_repr): The certificate to check for extension in
+
+        Returns:
+            (bool): Indicates if the extension is present or not
+        """
+        poison_ext = self.extensions.get("ctPoison", None)
+        return poison_ext is not None
 
     def set_extensions(self):
         extensions = {}
@@ -390,7 +435,7 @@ class Cert_repr:
     def authorityInfoAccess(self, ext, me):
         """
         The authority information access extension indicates how to access
-        information and services for the issuer of the certificate in which
+        information and services from the issuer of the certificate in which
         the extension appears. Information and services may include online
         validation services (such as OCSP) and issuer data.
         """
