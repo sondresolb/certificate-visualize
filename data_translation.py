@@ -357,14 +357,14 @@ def set_evaluation_result(evaluation_score, ui):
 
     gui_score = round(evaluation_score, 1)
 
-    if evaluation_score == -1 or 0 < evaluation_score < 40:
+    if evaluation_score == -1 or 0 <= evaluation_score < 45:
         ui.status_light.setPixmap(QtGui.QPixmap(status_lights["red"]))
         gui_score = 0
 
-    elif 40 <= evaluation_score < 65:
+    elif 45 <= evaluation_score < 75:
         ui.status_light.setPixmap(QtGui.QPixmap(status_lights["yellow"]))
 
-    elif 65 <= evaluation_score:
+    elif 75 <= evaluation_score:
         ui.status_light.setPixmap(QtGui.QPixmap(status_lights["green"]))
 
     ui.score.setText(f"{gui_score}/100")
