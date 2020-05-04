@@ -1,19 +1,12 @@
-# -*- coding: utf-8 -*-
-
-# Form implementation generated from reading ui file 'display_window.ui'
-#
-# Created by: PyQt5 UI code generator 5.14.1
-#
-# WARNING! All changes made in this file will be lost!
-
-
 from PyQt5 import QtCore, QtGui, QtWidgets
+from status_doc import Ui_status_doc
 
 
 class Ui_Form(object):
+
     def setupUi(self, Form):
         Form.setObjectName("Form")
-        Form.resize(1127, 703)
+        Form.resize(1180, 703)
         self.gridLayout = QtWidgets.QGridLayout(Form)
         self.gridLayout.setContentsMargins(15, 15, 15, 15)
         self.gridLayout.setObjectName("gridLayout")
@@ -98,21 +91,23 @@ class Ui_Form(object):
         spacerItem1 = QtWidgets.QSpacerItem(
             0, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout.addItem(spacerItem1)
-        self.status_light = QtWidgets.QLabel(self.layoutWidget)
+        self.status_light = QtWidgets.QPushButton(self.layoutWidget)
         sizePolicy = QtWidgets.QSizePolicy(
-            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(
             self.status_light.sizePolicy().hasHeightForWidth())
         self.status_light.setSizePolicy(sizePolicy)
-        self.status_light.setMaximumSize(QtCore.QSize(60, 60))
+        self.status_light.setMaximumSize(QtCore.QSize(61, 61))
         self.status_light.setText("")
-        self.status_light.setPixmap(QtGui.QPixmap(
-            "qt_files/color_lights/idle_light.svg"))
-        self.status_light.setScaledContents(True)
-        self.status_light.setAlignment(QtCore.Qt.AlignCenter)
-        self.status_light.setIndent(-1)
+        self.status_light.clicked.connect(self.status_clicked)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap(
+            "qt_files/color_lights/idle_light.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.status_light.setIcon(icon)
+        self.status_light.setIconSize(QtCore.QSize(60, 60))
+        self.status_light.setFlat(True)
         self.status_light.setObjectName("status_light")
         self.horizontalLayout.addWidget(self.status_light)
         self.verticalLayout.addLayout(self.horizontalLayout)
@@ -127,7 +122,7 @@ class Ui_Form(object):
         self.metric_tree.setIndentation(20)
         self.metric_tree.setAnimated(True)
         self.metric_tree.setObjectName("metric_tree")
-        self.metric_tree.header().setDefaultSectionSize(200)
+        self.metric_tree.header().setDefaultSectionSize(190)
         self.connection_details = QtWidgets.QTableWidget(self.splitter)
         sizePolicy = QtWidgets.QSizePolicy(
             QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
@@ -182,6 +177,8 @@ class Ui_Form(object):
         Form.setWindowTitle(_translate("Form", "Certificate Display"))
         self.score_name.setText(_translate("Form", "Score:"))
         self.score.setText(_translate("Form", "0/100"))
+        self.status_light.setToolTip(
+            _translate("Form", "Click for explanation"))
         item = self.connection_details.verticalHeaderItem(0)
         item.setText(_translate("Form", "IP"))
         item.setToolTip(_translate("Form", "Server IP address"))
@@ -221,6 +218,13 @@ class Ui_Form(object):
         __sortingEnabled = self.connection_details.isSortingEnabled()
         self.connection_details.setSortingEnabled(False)
         self.connection_details.setSortingEnabled(__sortingEnabled)
+
+    def status_clicked(self):
+        self.status_doc = QtWidgets.QDialog()
+        self.status_ui = Ui_status_doc()
+        self.status_ui.setupUi(self.status_doc)
+        self.status_doc.show()
+        self.status_doc.resize(1120, 640)
 
 
 if __name__ == "__main__":

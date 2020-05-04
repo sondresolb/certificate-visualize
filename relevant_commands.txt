@@ -1,0 +1,271 @@
+SSH KEY:
+--------
+eval "$(ssh-agent -s)"
+ssh-add ~/.ssh/thesis_rsa
+
+GUI:
+pyqt5
+pyqt5-tools (designer)
+
+pyQT5 notes:
+source: https://gist.github.com/ujjwal96/1dcd57542bdaf3c9d1b0dd526ccd44ff
+
+- pip3 install --user pyqt5==5.14
+- sudo apt-get install python3-pyqt5
+- sudo apt-get install pyqt5-dev-tools
+- sudo apt-get install qttools5-dev-tools
+
+- Install PyQt5 with pipenv
+
+- How to start application (designer):
+    - qtchooser -run-tool=designer -qt=5
+
+- How to compile .ui file:
+    - pyuic5 -x [FILENAME].ui -o [FILENAME].py
+
+
+Assumptions:
+    - The OCSP responder certificate is not revoked
+    - OCSP delegate certificates are not revoked
+    - Root certificates in store are not revoked
+    - Intermediate certificates are not revoked (gonna change)
+    - CRLs are signed by the issuer of the certificate beeing checked
+        - can find alternative issuer in "Authority Information Access" extention in crl
+    - CT log list is a trusted list
+        - Only checking CT information in TLSFeature extension
+    - CAA information is trusted
+    - Only checking for TLS (1.0, 1.1, 1.2, 1.3)
+        - OpenSSL comes without support for the deprecated (SSLv2 and SSLv3)
+        - possible to build OpenSSL with ssl versions included
+    - Only ciphers supported by OpenSSL are checked and evaluated
+
+
+Poorly configured domains:
+    - yosemite.edu
+    - Revoked and bad domains:
+        - revoked.grc.com
+        - badssl.com (Used to test different features like hsts, self signed etc.)
+
+Great example domains:
+    - myaccount.google.com
+    - uio.no
+
+
+DO THIS:
+
+    - Write scoring system
+        - Reduce percentage of crl and ocsp to increase caa, ct and mostly HSTS
+        - Evaluation variables:
+            - Certificate signature algorithm (weak signature hash (MD2, MD5, SHA1))
+            - TLS version (lowest)
+
+            - Cipher suite (Both evaluated by the security variable):
+                - Key exchange
+                    - authentication algo
+                    - exchange/generation algo
+                - Cipher (lowest)
+                    - security
+                    - encryption algo
+                    - hash algo
+
+            - Public key size (relative to algorithm)
+            - Support for revocation (CRL and OCSP)
+            - CRL details (only valid crls evaluated):
+                - Includes delta crls
+                - signature algo (hash type and size)
+            - OCSP details (only valid ocsps evaluated):
+                - Signature algo (hash type and size)
+                - How old the information is (treshold model)
+            - CT support
+            - DNS CAA support
+            - OCSP staple support
+            - OCSP must-staple support
+            - Certificate type? (dv, ov, ev)
+            - HSTS support
+
+        - Complete failure of certificate:
+            - Could not be validated (revoked, hostname missmatch, selfsigned etc.)
+            - Chain was not sorted (served correctly)
+            - Certificate is expired
+            - No revocation information
+            - Includes CTpoison extension
+
+
+
+CAB/Browser forum policy extension OIDs:
+
+individual-validated => (2.23.140.1.2.3)  (Compliant with Baseline Requirements – Individual identity asserted)
+domain-validated => (2.23.140.1.2.1)  (Compliant with Baseline Requirements – No entity identity asserted)
+organization-validated => (2.23.140.1.2.2)  (Compliant with Baseline Requirements – Organization identity asserted)
+extended-validation => 2.23.140.1.1 (Certificate issued in compliance with the Extended Validation Guidelines)
+
+
+Errors and results found:
+- A correction to certvalidator was made to fix problem of no revocation reason:
+    - certvalidator/validate.py (function: verify_ocsp_response(), line 1127)
+    - This will not be available to others cloneing my repo. A new pypi package
+      must be distributed by the owner of the certvalidator repository containing
+      the fix.
+
+
+Meeting notes 26-02-2020:
+-------------------------
+- Where should i draw the line regarding validation checks of data related to ocsp, crl, caa, ct etc. 
+    - Including checks of ocsp responder certificate, getting delegate crl signing cert etc.
+
+    answear: assume data is signed by issuer of checked cert. Do simple checks of times and other fields.
+             Do ranking of information later. Dont care about validity of server servering info. Include this
+             in the written thesis
+
+- Validation might fail and leave some parts unchecked. Define validation as a single process
+    - this includes all steps defined in rfc 5280
+    - display the fault but rank as one process.
+
+    answear: rank as single process. Include steps for validation in thesis and explain why
+             it was implemented that way
+
+- Ranking of crl and ocsp results:
+    - does algorithms for external checking mechanisms affect cert security (yes?)
+    - Strenght of algoritms
+    - how recent the information is 
+    - if it is supported or not (failure to fetch goes under not supported)
+    
+    answear: Do checks for algorithms etc. of ocsp and crl. use blacklist of
+             weak algos and chipers to rank them. Failure means not supported
+
+- possible example:
+        - try checking ocsp and then block ocsps endpoint. compare with Browser
+
+
+
+Project Notes to include in thesis (2 334 lines of code/doc):
+-------------------------------------------------------------
+- certvalidator details:
+    - Follows this standard for path validation:
+        - Certificate Path Validation algorithm from RFC 5280 Section 5
+        - https://tools.ietf.org/html/rfc5280#section-6
+        - Does not do "name constraints"
+    - TLS checking
+        - DNS-ID and CN-ID Matching from RFC 6125
+        - https://tools.ietf.org/html/rfc6125#section-6
+
+- Server configs to mention that were excluded from tool
+    - Key pinning
+    - Upgrade insecure requests
+    - Https everywhere (https://www.eff.org/https-everywhere)
+
+- Certificate expiration calculation from stackoverflow:
+    - https://stackoverflow.com/a/47207182/5490422
+
+- Certificate transparency:
+    -   A SCT is signed with the public key of the log that issued it (either EC or RSA key)
+    -   A conforming client will do validation of the certificate and its chain, and validate the
+        SCT by computing the signature input from the SCT data and verify the signature, using the
+        corresponding log's public key
+    -   TLS clients MUST reject SCTs whose timestamp is in the future
+    -   A SCT can be included in either a certificate extension, TLS extension or in a stapled-ocsp
+        response where the response includes an OCSP extension with OID 1.3.6.1.4.1.11129.2.4.5. This 
+        thesis will focus mainly on the means provided by the end-certificate itself, and do to scope,
+        will fail certificate transparency if SCT's are not included as an extension in the certificate itself.
+    -   The most common way of distributing the SCT is through the certificate extension
+        named signedCertificateTimestampList
+    -   According to the RFC6962, a conforming server must at least include one SCT in one or more of
+        the mentioned distribution methods. A server operators MAY include more than one SCT
+    -   The signature data is a signature over the version, type, timestamp, log entry type, 
+        any extensions, and the certificate.
+
+        The signed structure making up the SCT signature:
+        digitally-signed struct {
+            Version sct_version;      # get from crypto
+            SignatureType signature_type = 0;
+            uint64 timestamp;         # get from crypto
+            LogEntryType entry_type;  # get from crypto
+            select(entry_type) {
+                case x509_entry: ASN.1Cert; # Public bytes of end_cert
+                case precert_entry: PreCert;
+            } signed_entry;
+            CtExtensions extensions;  # No extensions exists
+        }
+
+    -   The key field in log list entry: A CT log public key(DER encoding of the SubjectPublicKeyInfo
+        ASN.1 structure)
+    -   When the SCT is included in a verified signature, you can trust the CA who issued it that the
+        information included in the SCT is valid. No signature verification needed.
+    -   Using a trusted CT log list as a trust store for CT log information
+        https://www.gstatic.com/ct/log_list/v2/log_list.json
+        This is the same CT list that is included in google chrome for CT checking.
+
+- OCSP Must-staple:
+    -   If cryptography.x509.TLSFeature extension is embedded in certificate, 
+        it signals to the client that it should require a stapled OCSP response in the TLS handshake.
+        The TLS Feature extension is defined in RFC 7633. Commonly known as OCSP Must-Staple in certificates.
+
+- Good resource for metric building:
+    - https://github.com/ssllabs/research/wiki/SSL-and-TLS-Deployment-Best-Practices
+        - recommendations and list of strong ciphers
+
+- Cipher evaluation:
+    - The way most applications do ciphersuite scanning is by emulating different
+      operating systems connecting to the server. Example: Emulated window 8/XP connecting
+      with "TLS_RSA_WITH_3DES_EDE_CBC_SHA" ciphersuite. Do to time constraints and scope of this thesis,
+      such an extensive implementation is not feasible. Therefore, ciphersuites not included in
+      the complete cipherlist of the current OpenSSL version, will not be detected and evaluated.
+      (www.fronter.com). An exemption to this rule is for tlsv1.3, where the list of supported ciphersuites
+      is very limited. In this case, the remaining ciphers not included by openssl is hardcoded in.
+
+    - SSLlabs is capping the total score for use of tlsv1.0 and tlsv1.1. In this thesis,
+      the focus lies on the security of the end-certificate itself. Therefore, there are no
+      capping on score for use of weak protocols or ciphersuites, but it will reflect in the
+      total score.
+
+    - Ciphersuites using CBC will be demoted to weak.
+
+    - source: https://ciphersuite.info/page/faq/
+    - insecure:
+        These ciphers are very old and shouldn't be used under any circumstances. Their protection can be broken
+        with minimal effort nowadays.
+
+    - weak:
+        These ciphers are old and should be disabled if you are setting up a new server for example. Make sure to
+        only enable them if you have a special use case where support for older operating systems, browsers or 
+        applications is required.
+
+    - secure:
+        Secure ciphers are considered state-of-the-art and if you want to secure your web server you should certainly
+        choose from this set. Only very old operating systems, browsers or applications are unable to handle them.
+
+    - recommended
+        All 'recommended' ciphers are 'secure' ciphers by definition. Recommended means that these ciphers also support
+        PFS (Perfect Forward Secrecy) and should be your first choice if you want the highest level of security.
+        However, you might run into some compatibility issues with older clients that do not support PFS ciphers.
+
+
+
+- Text in the documentation page:
+
+In the evaluation process, the information gathered from the scan is split into eight categories, namely,\nCertificate, CRL (Certificate Revocation Lists), OCSP (Online Certificate Status Protocol), CT\n(Certificate Transparency), CAA (Certificate Authority Authorization), OCSP-Staple, HSTS (HTTP Strict\nTransport Security) and Protocol-ciphers. Each of these categories are assigned weights which dictate\nhow much they will influence the total score. Depending on the complexity of the category, it\nmight be broken down into sub-categories and assigned weights. Each category contains one or more\nbase-elements (e.g,. The signature hash of the certificate) which are given a weight and a score\nfrom 0 to 100. When all base-elements within a category have been assigned a score and multiplied\nby their respective weight, they are summed up to make up the total score for that category.\nThis process is repeated until we are left with the final score.\n\nThe "Evaluation" entry found in the top right window of the main certificate display contains an\nevaluation tree, detailing the score given to each category and base-element.
+
+
+Conditional failures
+--------------------
+
+The certificate is only given a score by passing a set of conditional checks. If a check fails, the score\nis automatically set to 0. These checks include:
+
+- Validation
+The certificate validation process employs the Basic Path Validation algorithm defined in section 6.1 of\nRFC 5280 (excluding name constraint checks). This includes, but are not limited to certificate path\nbuilding, revocation, expired end-certificate, hostname missmatch, self-signed end-certificate and\nsignature verification. The certificate chain is validated for use in a TLS connection by checking\nall key usage parameters and verifying the service identity you are connecting to according to\nsection 6 of RFC 6125.
+
+
+- Evaluation
+The evaluation will check if the end-certificate have embedded at least one revocation method. This would\nbe either CRL or OCSP. The end-certificate must be version 3 and can not include the CT-poison\nextension or be signed using md2, md5 or sha1
+
+
+
+
+from status_doc import Ui_status_doc
+self.status_light.clicked.connect(self.status_clicked)
+
+def status_clicked(self):
+        self.status_doc = QtWidgets.QDialog()
+        self.status_ui = Ui_status_doc()
+        self.status_ui.setupUi(self.status_doc)
+        self.status_doc.show()
