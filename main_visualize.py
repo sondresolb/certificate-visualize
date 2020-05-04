@@ -180,7 +180,7 @@ class Ui_MainWindow(QObject):
         self.url_input_lineEdit.setEnabled(False)
         self.progress_label.show()
         domain_url = self.url_input_lineEdit.text()
-        domain = domain_url.replace("http://", "")
+        domain = domain_url.replace("http://", "").replace("https://", "")
 
         try:
 

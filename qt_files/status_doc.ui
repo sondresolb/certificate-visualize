@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1069</width>
-    <height>750</height>
+    <width>1119</width>
+    <height>634</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -35,9 +35,9 @@
       <property name="geometry">
        <rect>
         <x>0</x>
-        <y>-247</y>
-        <width>1035</width>
-        <height>1843</height>
+        <y>0</y>
+        <width>1085</width>
+        <height>1595</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -107,7 +107,7 @@
            <property name="maximumSize">
             <size>
              <width>16777215</width>
-             <height>88</height>
+             <height>16777215</height>
             </size>
            </property>
            <property name="font">
@@ -117,9 +117,10 @@
            </property>
            <property name="text">
             <string>Red signifies a score greater or equal to 0 and less than 45 (0 &lt;= x &lt; 45).
-It can also indicate a certificate validation and/or evaluation failure as described below. Certificates
-with this status should not be used to secure a connection, as they are likely faulty in configuration or
-using deprecated cryptographic functions</string>
+It can also indicate a certificate validation and/or evaluation failure as described below. Certificates with this status should not be used to secure a connection, as they are likely faulty in configuration or using deprecated cryptographic functions</string>
+           </property>
+           <property name="wordWrap">
+            <bool>true</bool>
            </property>
           </widget>
          </item>
@@ -154,7 +155,7 @@ using deprecated cryptographic functions</string>
            <property name="maximumSize">
             <size>
              <width>16777215</width>
-             <height>88</height>
+             <height>16777215</height>
             </size>
            </property>
            <property name="font">
@@ -164,9 +165,10 @@ using deprecated cryptographic functions</string>
            </property>
            <property name="text">
             <string>Yellow signifies a score greater or equal to 45 and less than 75 (45 &lt;= x &lt; 75).
-Certificates with this status might be using a weak public key, old or deprecated cryptographic functions
-and/or only support a small subset of security mechanisms. Depending on where the score falls within
-the threshold, this might not be sufficiently secure for transfer of credentials or comparable information</string>
+Certificates with this status might be using a weak public key, old or deprecated cryptographic functions and/or only support a small subset of security mechanisms. Depending on where the score falls within the threshold, this might not be sufficiently secure for transfer of credentials or comparable information</string>
+           </property>
+           <property name="wordWrap">
+            <bool>true</bool>
            </property>
           </widget>
          </item>
@@ -201,7 +203,7 @@ the threshold, this might not be sufficiently secure for transfer of credentials
            <property name="maximumSize">
             <size>
              <width>16777215</width>
-             <height>88</height>
+             <height>16777215</height>
             </size>
            </property>
            <property name="font">
@@ -211,9 +213,10 @@ the threshold, this might not be sufficiently secure for transfer of credentials
            </property>
            <property name="text">
             <string>Green signifies a score greater or equal to 75 and less or equal to 100 (75 &lt;= x &lt;=100).
-Certificates with this status are showing strong results accross most categories and with
-decent to good support for security mechanisms. This should provide a sufficiently secure
-connection for most usecases</string>
+Certificates with this status are showing strong results accross most categories and with decent to good support for security mechanisms. This should provide a sufficiently secure connection for most usecases</string>
+           </property>
+           <property name="wordWrap">
+            <bool>true</bool>
            </property>
           </widget>
          </item>
@@ -261,19 +264,7 @@ connection for most usecases</string>
           </font>
          </property>
          <property name="text">
-          <string>In the evaluation process, the information gathered from the scan is split into eight categories, namely,
-Certificate, CRL (Certificate Revocation Lists), OCSP (Online Certificate Status Protocol), CT
-(Certificate Transparency), CAA (Certificate Authority Authorization), OCSP-Staple, HSTS (HTTP Strict
-Transport Security) and Protocol-ciphers. Each of these categories are assigned weights which dictate
-how much they will influence the total score. Depending on the complexity of the category, it
-might be broken down into sub-categories and assigned weights. Each category contains one or more
-base-elements (e.g,. The signature hash of the certificate) which are given a weight and a score
-from 0 to 100. When all base-elements within a category have been assigned a score and multiplied
-by their respective weight, they are summed up to make up the total score for that category.
-This process is repeated until we are left with the final score.
-
-The &quot;Evaluation&quot; entry found in the top right window of the main certificate display contains an
-evaluation tree, detailing the score given to each category and base-element</string>
+          <string>In the evaluation process, the information gathered from the scan is split into eight categories, namely, Certificate, CRL (Certificate Revocation Lists), OCSP (Online Certificate Status Protocol), CT (Certificate Transparency), CAA (Certificate Authority Authorization), OCSP-Staple, HSTS (HTTP Strict Transport Security) and Protocol-ciphers. Each of these categories are assigned weights which dictate how much they will influence the total score. Depending on the complexity of the category, it might be broken down into sub-categories and assigned weights. Each category contains one or more base-elements (e.g,. The signature hash of the certificate) which are given a weight and a score from 0 to 100. When all base-elements within a category have been assigned a score and multiplied by their respective weight, they are summed up to make up the total score for that category. This process is repeated until we are left with the final score.</string>
          </property>
          <property name="scaledContents">
           <bool>false</bool>
@@ -281,26 +272,28 @@ evaluation tree, detailing the score given to each category and base-element</st
          <property name="alignment">
           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
          </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
          <property name="indent">
           <number>0</number>
          </property>
         </widget>
        </item>
        <item>
-        <spacer name="verticalSpacer_2">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
+        <widget class="QLabel" name="label_25">
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
          </property>
-         <property name="sizeType">
-          <enum>QSizePolicy::Fixed</enum>
+         <property name="text">
+          <string>The &quot;Evaluation&quot; entry found in the top right window of the main certificate display contains an evaluation tree, detailing the score given to each category and base-element</string>
          </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>25</height>
-          </size>
+         <property name="wordWrap">
+          <bool>true</bool>
          </property>
-        </spacer>
+        </widget>
        </item>
        <item>
         <widget class="QLabel" name="label_10">
@@ -328,8 +321,10 @@ evaluation tree, detailing the score given to each category and base-element</st
           </font>
          </property>
          <property name="text">
-          <string>The certificate is only given a score by passing a set of conditional checks. If a check fails, the score
-is automatically set to 0. These checks include:</string>
+          <string>The certificate is only given a score by passing a set of conditional checks. If a check fails, the score is automatically set to 0. These checks include:</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
          </property>
         </widget>
        </item>
@@ -373,18 +368,22 @@ is automatically set to 0. These checks include:</string>
            </item>
            <item>
             <widget class="QLabel" name="label_13">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
              <property name="font">
               <font>
                <pointsize>14</pointsize>
               </font>
              </property>
              <property name="text">
-              <string>The certificate validation process employs the Basic Path Validation algorithm defined in section 6.1 of
-RFC 5280 (excluding name constraint checks). This includes, but are not limited to certificate path
-building, revocation, expired end-certificate, hostname missmatch, self-signed end-certificate and
-signature verification. The certificate chain is validated for use in a TLS connection by checking
-all key usage parameters and verifying the service identity you are connecting to according to
-section 6 of RFC 6125</string>
+              <string>The certificate validation process employs the Basic Path Validation algorithm defined in section 6.1 of RFC 5280 (excluding name constraint checks). This includes, but are not limited to certificate path building, revocation, expired end-certificate, hostname missmatch, self-signed end-certificate and signature verification. The certificate chain is validated for use in a TLS connection by checking all key usage parameters and verifying the service identity you are connecting to according to section 6 of RFC 6125</string>
+             </property>
+             <property name="wordWrap">
+              <bool>true</bool>
              </property>
              <property name="indent">
               <number>19</number>
@@ -411,9 +410,10 @@ section 6 of RFC 6125</string>
               </font>
              </property>
              <property name="text">
-              <string>The evaluation will check if the end-certificate have embedded at least one revocation method. This would
-be either CRL or OCSP. The end-certificate must be version 3 and can not include the CT-poison
-extension or be signed using md2, md5 or sha1</string>
+              <string>The evaluation will check if the end-certificate have embedded at least one revocation method. This would be either CRL or OCSP. The end-certificate must be version 3 and can not include the CT-poison extension or be signed using md2, md5 or sha1</string>
+             </property>
+             <property name="wordWrap">
+              <bool>true</bool>
              </property>
              <property name="indent">
               <number>19</number>
@@ -423,22 +423,6 @@ extension or be signed using md2, md5 or sha1</string>
           </layout>
          </item>
         </layout>
-       </item>
-       <item>
-        <spacer name="verticalSpacer_3">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeType">
-          <enum>QSizePolicy::Fixed</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>25</height>
-          </size>
-         </property>
-        </spacer>
        </item>
        <item>
         <widget class="QLabel" name="label_16">
@@ -498,8 +482,10 @@ extension or be signed using md2, md5 or sha1</string>
               </font>
              </property>
              <property name="text">
-              <string>These ciphers are very old and shouldn't be used under any circumstances. Their protection can be broken
-with minimal effort nowadays</string>
+              <string>These ciphers are very old and shouldn't be used under any circumstances. Their protection can be broken with minimal effort nowadays</string>
+             </property>
+             <property name="wordWrap">
+              <bool>true</bool>
              </property>
              <property name="indent">
               <number>19</number>
@@ -526,9 +512,10 @@ with minimal effort nowadays</string>
               </font>
              </property>
              <property name="text">
-              <string>These ciphers are old and should be disabled if you are setting up a new server for example. Make sure to
-only enable them if you have a special use case where support for older operating systems, browsers or
-applications is required</string>
+              <string>These ciphers are old and should be disabled if you are setting up a new server for example. Make sure to only enable them if you have a special use case where support for older operating systems, browsers or applications is required</string>
+             </property>
+             <property name="wordWrap">
+              <bool>true</bool>
              </property>
              <property name="indent">
               <number>19</number>
@@ -555,9 +542,10 @@ applications is required</string>
               </font>
              </property>
              <property name="text">
-              <string>Secure ciphers are considered state-of-the-art and if you want to secure your web server you should
-certainly choose from this set. Only very old operating systems, browsers or applications are
-unable to handle them</string>
+              <string>Secure ciphers are considered state-of-the-art and if you want to secure your web server you should certainly choose from this set. Only very old operating systems, browsers or applications are unable to handle them</string>
+             </property>
+             <property name="wordWrap">
+              <bool>true</bool>
              </property>
              <property name="indent">
               <number>19</number>
@@ -584,10 +572,10 @@ unable to handle them</string>
               </font>
              </property>
              <property name="text">
-              <string>All 'recommended' ciphers are 'secure' ciphers by definition. Recommended means that these ciphers also
-support PFS (Perfect Forward Secrecy) and should be your first choice if you want the highest level
-of security. However, you might run into some compatibility issues with older clients that do not
-support PFS ciphers</string>
+              <string>All 'recommended' ciphers are 'secure' ciphers by definition. Recommended means that these ciphers also support PFS (Perfect Forward Secrecy) and should be your first choice if you want the highest level of security. However, you might run into some compatibility issues with older clients that do not support PFS ciphers</string>
+             </property>
+             <property name="wordWrap">
+              <bool>true</bool>
              </property>
              <property name="indent">
               <number>19</number>
@@ -597,22 +585,6 @@ support PFS ciphers</string>
           </layout>
          </item>
         </layout>
-       </item>
-       <item>
-        <spacer name="verticalSpacer_4">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeType">
-          <enum>QSizePolicy::MinimumExpanding</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>0</height>
-          </size>
-         </property>
-        </spacer>
        </item>
       </layout>
      </widget>
