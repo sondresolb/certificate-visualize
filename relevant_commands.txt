@@ -40,15 +40,18 @@ Assumptions:
     - Only ciphers supported by OpenSSL are checked and evaluated
 
 
-test domains()
-- yosemite.edu
-
+Poorly configured domains:
+    - yosemite.edu
     - Revoked and bad domains:
         - revoked.grc.com
         - badssl.com (Used to test different features like hsts, self signed etc.)
 
+Great example domains:
+    - myaccount.google.com
+    - uio.no
+
+
 DO THIS:
-    - DNS CAA records for a domain holds for all subdomains unless specified for subdomain
 
     - Write scoring system
         - Reduce percentage of crl and ocsp to increase caa, ct and mostly HSTS

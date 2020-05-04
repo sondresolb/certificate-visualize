@@ -16,6 +16,7 @@ certifi = "*"
 pem = "*"
 dnspython = "*"
 pyqt5 = "*"
+tld = "*"
 
 [requires]
 python_version = "3.7"
