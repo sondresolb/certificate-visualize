@@ -60,10 +60,6 @@ python main_visualize.py
 
 * **Sondre Solbakken** - https://github.com/sondresolb
 
-## License
-
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
-
 ## Acknowledgments
 * Thank you to [attaque](https://stackoverflow.com/users/1116508/attaque) for the expiration calculation [function](https://stackoverflow.com/questions/1345827/how-do-i-find-the-time-difference-between-two-datetime-objects-in-python/47207182#47207182) and to [ise.io](https://www.ise.io/using-openssl-determine-ciphers-enabled-server/) for the method to determine enabled ciphers-suites on a server.
 * Wikipedia for the initial green status light [file](https://en.m.wikipedia.org/wiki/File:Green_sphere.svg)
