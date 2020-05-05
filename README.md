@@ -4,7 +4,7 @@ A desktop application for validating and analysing the security of a domain-cert
 
 ## Getting Started
 
-Instructions for cloning and testing application
+Instructions for cloning and using application
 
 ### Prerequisites
 
