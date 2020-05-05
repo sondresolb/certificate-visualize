@@ -62,4 +62,5 @@ python main_visualize.py
 
 ## Acknowledgments
 * Thank you to [attaque](https://stackoverflow.com/users/1116508/attaque) for the expiration calculation [function](https://stackoverflow.com/questions/1345827/how-do-i-find-the-time-difference-between-two-datetime-objects-in-python/47207182#47207182) and to [ise.io](https://www.ise.io/using-openssl-determine-ciphers-enabled-server/) for the method to determine enabled ciphers-suites on a server.
+* SSL Labs for the [resources](https://github.com/ssllabs/research/wiki/SSL-and-TLS-Deployment-Best-Practices) on best practises for certificate and SSL deployment
 * Wikipedia for the initial green status light [file](https://en.m.wikipedia.org/wiki/File:Green_sphere.svg)
