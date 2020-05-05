@@ -1,6 +1,6 @@
 # Certificate Security Visualization
 
-A desktop application for validating and analysing the security of a domain-certificate and relevant security mechanisms. It provides details surrounding the certificate chain, Certificate Revocation lists (CRL), Online Certificate Status Protocol (OCSP), Certificate Transparency (CT), Certificate Authority Authorization (CAA), HTTP Strict Transport Security (HSTS), OCSP-Staple, must-staple, supported TLS protocols, ciphers-suites and more. A score is calculated after the analysis and a light is shown to indicate the approximate security level. The application intendes to make the details of web security and the PKI accessable to a more general audience with limited knowledge about the subject.
+A desktop application for validating and analysing the security of a domain-certificate and relevant security mechanisms. It provides details surrounding the certificate chain, Certificate Revocation lists (CRL), Online Certificate Status Protocol (OCSP), Certificate Transparency (CT), Certificate Authority Authorization (CAA), HTTP Strict Transport Security (HSTS), OCSP-Staple, must-staple, supported TLS protocols, ciphers-suites and more. A score is calculated after the analysis and a light is shown to indicate the approximate security level. The application intendes to make the details of web security and the PKI accessable to a general audience with limited knowledge on the subject.
 
 ## Getting Started
 
@@ -22,7 +22,7 @@ Clone the repository
 ```
 git clone "repo"
 ```
-Change directory into the root folder of certificate-visualize
+Change directory to the root folder of certificate-visualize
 
 ```
 cd cert_visualize
