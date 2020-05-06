@@ -238,34 +238,3 @@ Project Notes to include in thesis (2 334 lines of code/doc):
         All 'recommended' ciphers are 'secure' ciphers by definition. Recommended means that these ciphers also support
         PFS (Perfect Forward Secrecy) and should be your first choice if you want the highest level of security.
         However, you might run into some compatibility issues with older clients that do not support PFS ciphers.
-
-
-
-- Text in the documentation page:
-
-In the evaluation process, the information gathered from the scan is split into eight categories, namely,\nCertificate, CRL (Certificate Revocation Lists), OCSP (Online Certificate Status Protocol), CT\n(Certificate Transparency), CAA (Certificate Authority Authorization), OCSP-Staple, HSTS (HTTP Strict\nTransport Security) and Protocol-ciphers. Each of these categories are assigned weights which dictate\nhow much they will influence the total score. Depending on the complexity of the category, it\nmight be broken down into sub-categories and assigned weights. Each category contains one or more\nbase-elements (e.g,. The signature hash of the certificate) which are given a weight and a score\nfrom 0 to 100. When all base-elements within a category have been assigned a score and multiplied\nby their respective weight, they are summed up to make up the total score for that category.\nThis process is repeated until we are left with the final score.\n\nThe "Evaluation" entry found in the top right window of the main certificate display contains an\nevaluation tree, detailing the score given to each category and base-element.
-
-
-Conditional failures
---------------------
-
-The certificate is only given a score by passing a set of conditional checks. If a check fails, the score\nis automatically set to 0. These checks include:
-
-- Validation
-The certificate validation process employs the Basic Path Validation algorithm defined in section 6.1 of\nRFC 5280 (excluding name constraint checks). This includes, but are not limited to certificate path\nbuilding, revocation, expired end-certificate, hostname missmatch, self-signed end-certificate and\nsignature verification. The certificate chain is validated for use in a TLS connection by checking\nall key usage parameters and verifying the service identity you are connecting to according to\nsection 6 of RFC 6125.
-
-
-- Evaluation
-The evaluation will check if the end-certificate have embedded at least one revocation method. This would\nbe either CRL or OCSP. The end-certificate must be version 3 and can not include the CT-poison\nextension or be signed using md2, md5 or sha1
-
-
-
-
-from status_doc import Ui_status_doc
-self.status_light.clicked.connect(self.status_clicked)
-
-def status_clicked(self):
-        self.status_doc = QtWidgets.QDialog()
-        self.status_ui = Ui_status_doc()
-        self.status_ui.setupUi(self.status_doc)
-        self.status_doc.show()

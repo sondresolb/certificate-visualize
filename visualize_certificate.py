@@ -159,7 +159,7 @@ class Cert_repr:
         """Check if a certificate includes the ctPoison extension
 
         If a certificate includes the ctPoison extension, it should not
-        be used for any purposed carried out by a complete x509 certificate.
+        be used for any purpose carried out by a complete x509 certificate.
         A certificate including this extension is a pre-certificate meant to
         be issued to a certificate transparency log.
 

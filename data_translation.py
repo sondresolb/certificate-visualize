@@ -358,16 +358,13 @@ def set_evaluation_result(evaluation_score, ui):
     gui_score = round(evaluation_score, 1)
 
     if evaluation_score == -1 or 0 <= evaluation_score < 45:
-        # ui.status_light.setPixmap(QtGui.QPixmap(status_lights["red"]))
         color_key = "red"
         gui_score = 0
 
     elif 45 <= evaluation_score < 75:
-        # ui.status_light.setPixmap(QtGui.QPixmap(status_lights["yellow"]))
         color_key = "yellow"
 
     elif 75 <= evaluation_score:
-        # ui.status_light.setPixmap(QtGui.QPixmap(status_lights["green"]))
         color_key = "green"
 
     icon = QtGui.QIcon()
@@ -514,6 +511,52 @@ def custom_item_layout(parent, key, value, is_string):
             item[1] = QStandardItem(value["total"])
             del value["total"]
 
+        elif key == "Validation path":
+            item[0].setToolTip(textwrap.fill(
+                "The sequence of certificates used for validation, "
+                "starting from the End-user certificate to the root", 38))
+
+        elif key == "Intermediate Certificates":
+            item[0].setToolTip(textwrap.fill(
+                "An ordered list of certificates binding the end-certificate "
+                "to the root", 38))
+
+        elif key == "Root Certificate":
+            item[0].setToolTip(textwrap.fill(
+                "The root acts as a trust anchor. Given that the path "
+                "validation was successful, we known the end-certificate "
+                "can be trusted. Roots are contained in a trust store which can "
+                "differ depending on the browser or operating system", 38))
+
+        elif key == "Certificate Revocation Lists":
+            item[0].setToolTip(textwrap.fill(
+                "A CRL is a signed list containing revoked certificates. "
+                "You can search through it using the serial number of a "
+                "certificate to figure out if it's revoked. Each CA "
+                "maintains its own collection of CRLs", 38))
+
+        elif key == "Online Certificate Status Protocol":
+            item[0].setToolTip(textwrap.fill(
+                "OCSP provides timely and recent revocation information. "
+                "The protocol is a better alternative to CRL revocation "
+                "checking, but can be less reliable", 38))
+
+        elif key == "Certificate Transparency":
+            item[0].setToolTip(textwrap.fill(
+                "List of Signed Certificate Timestamps (SCT) embedded in "
+                "the end-certificate and associated logs. The SCT is proof "
+                "that the certificate has been included in a CT-log", 38))
+
+        elif key == "Certificate Authority Authorization":
+            item[0].setToolTip(textwrap.fill(
+                "A DNS CAA record determines which Certificate Authorities who "
+                "are allowed to issue certificates for the domain (ca_issuer)", 38))
+
+        elif key == "Cipher suites":
+            item[0].setToolTip(textwrap.fill(
+                "A list of supported TLS protocols with the enabled  "
+                "cipher-suites", 38))
+
         return item
 
 
@@ -523,6 +566,12 @@ def subject_layout(value, item_list):
 
 def issuer_layout(value, item_list):
     return QStandardItem(value["commonName"])
+
+
+def signature_algorithm_layout(value, item_list):
+    item_list[0].setToolTip(textwrap.fill(
+        "The algorithm used to create the signature of this data object, "
+        "together with the signature hash", 38))
 
 
 def signature_hash_layout(value, item_list):
@@ -537,6 +586,10 @@ def validity_period_layout(value, item_list):
         msg = f"Expired for:  {value['has_expired']}"
         del value["has_expired"]
 
+    item_list[0].setToolTip(textwrap.fill(
+        "The period in which the certificate is valid and can be used to "
+        "secure a connection", 38))
+
     return QStandardItem(msg)
 
 
@@ -546,15 +599,104 @@ def expired_layout(value, item_list):
 
 
 def fingerprint_layout(value, item_list):
+    item_list[0].setToolTip(textwrap.fill("Unique identifiers", 38))
     msg = f"{value['SHA1']} (sha1)"
     return QStandardItem(msg)
 
 
 def must_staple_layout(value, item_list):
+    item_list[0].setToolTip(textwrap.fill(
+        "The OCSP Must-Staple extension signals to the browser that the "
+        "certificate must be served with a valid OCSP response, "
+        "providing better privacy for clients, since they don't have to fetch "
+        "the OCSP data themselves", 38))
     return QStandardItem("Yes") if value == 'True' else QStandardItem("No")
 
 
+def is_delta_layout(value, item_list):
+    item_list[0].setToolTip(textwrap.fill(
+        "The delta CRL indicator extension indicates that the CRL is a "
+        "delta. A delta CRL contains newly revoked certificates that was "
+        "not included in the complete CRL it points to. This provides "
+        "updated information before the next complete CRL is issued", 38))
+
+
+def last_update_layout(value, item_list):
+    item_list[0].setToolTip(textwrap.fill(
+        "Indicates when the information in this object was last updated", 38))
+
+
+def next_update_layout(value, item_list):
+    item_list[0].setToolTip(textwrap.fill(
+        "The time at or before which newer information will be available", 38))
+
+
+def contains_revoked_layout(value, item_list):
+    item_list[0].setToolTip(textwrap.fill(
+        "Indicates if this CRL contains a certificate that has a matching "
+        "serial number to the end-certificate", 38))
+
+
+def response_status_layout(value, item_list):
+    item_list[0].setToolTip(textwrap.fill(
+        "The response status indicates if the communication with the OCSP "
+        "server was SUCCESSFUL. The other status indicators are: "
+        "MALFORMED_REQUEST, INTERNAL_ERROR, TRY_LATER, SIG_REQUIRED and UNAUTHORIZED", 38))
+
+
+def certificate_status_layout(value, item_list):
+    item_list[0].setToolTip(textwrap.fill(
+        "The certificate status indicates the revocation status of the "
+        "certificate. The status indicators are: GOOD, REVOKED and UNKNOWN", 38))
+
+
+def verification_cert_layout(value, item_list):
+    item_list[0].setToolTip(textwrap.fill(
+        "The certificate used to verify the signature of the OCSP response", 38))
+
+
+def can_sign_layout(value, item_list):
+    item_list[0].setToolTip(textwrap.fill(
+        "If the verification certificate is authorized to sign the OCSP response", 38))
+
+
+def signature_verified_layout(value, item_list):
+    item_list[0].setToolTip(textwrap.fill(
+        "If the OCSP response signature was successfully verified", 38))
+
+
+def certificate_serial_layout(value, item_list):
+    item_list[0].setToolTip(textwrap.fill(
+        "Serial number of the certificate beeing checked", 38))
+
+
+def produced_at_layout(value, item_list):
+    item_list[0].setToolTip(textwrap.fill(
+        "The time at which the OCSP response was signed", 38))
+
+
+def this_update_layout(value, item_list):
+    item_list[0].setToolTip(textwrap.fill(
+        "The time at which the certificate_status being indicated is "
+        "known to be correct", 38))
+
+
+def submitted_layout(value, item_list):
+    item_list[0].setToolTip(textwrap.fill(
+        "The time in which the certificate was submitted to the public log", 38))
+
+
+def entry_type_layout(value, item_list):
+    item_list[0].setToolTip(textwrap.fill(
+        "The type of certificate that was included in the public log. "
+        "The types include CERTIFICATE and PRE-CERTIFICATE", 38))
+
+
 def ct_poison_layout(value, item_list):
+    item_list[0].setToolTip(textwrap.fill(
+        "The ct-poison extension indicates that a certificate is a "
+        "pre-certificate, and should not be used for any purpose carried out by "
+        "a complete certificate", 38))
     return QStandardItem("Yes") if value == 'True' else QStandardItem("No")
 
 
@@ -570,15 +712,17 @@ def sct_layout(value, item_list):
 
 
 def mmd_layout(value, item_list):
-    description = (
-        """Maximum Merge Delay
-        The maximum amount of time that can pass
-        before the certificate is included in the public log"""
-    )
-    item_list[0].setToolTip(description)
+    item_list[0].setToolTip(textwrap.fill(
+        "The Maximum Merge Delay indicates the maximum amount of time "
+        "that can pass before a certificate is included in the public log", 38))
 
 
 def log_state_layout(value, item_list):
+    item_list[0].setToolTip(textwrap.fill(
+        "The state in which the log is currently in. The states are: "
+        "pending, usable, read-only, retired, rejected. The associated "
+        "timestamp indicates the time in which this state took effect", 38))
+
     log_state = value["log_state"]
     del value["log_state"]
     return QStandardItem(log_state)
@@ -603,6 +747,11 @@ def verification_result_layout(value, item_list):
 
 
 def public_key_layout(value, item_list):
+    item_list[0].setToolTip(textwrap.fill(
+        "The public key contained in this certificate. The key can be used with an "
+        "asymmetric cryptographic algorithm to perform encryption, signing, "
+        "authentication and key exchange", 38))
+
     if value['type'] == 'RSA':
         return QStandardItem(f"{value['type']} {value['size']} ({value['exponent']})")
     elif value['type'] == 'DSA':
@@ -623,6 +772,12 @@ def intermediates_layout(value, item_list):
 
 def root_layout(value, item_list):
     return QStandardItem("X509 Certificate")
+
+
+def extensions_layout(value, item_list):
+    item_list[0].setToolTip(textwrap.fill(
+        "The extensions contained within this certificate. Extensions "
+        "provide additional information and functionality to the certificate", 38))
 
 
 def extension_layout(value, item_list):
