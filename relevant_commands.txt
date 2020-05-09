@@ -45,13 +45,71 @@ Poorly configured domains:
     - Revoked and bad domains:
         - revoked.grc.com
         - badssl.com (Used to test different features like hsts, self signed etc.)
+        -  "ettoday.net": "The X.509 certificate provided is not valid for ettoday.net. Valid hostnames include: *.ettoday.net",
+
+    - www.cstj.qc.ca    : 54.58
+    - www.uscga.edu     : 54.58
+    - dictionary.com    : 52.3,
+    - thesaurus.com     : 52.3
+    - win-rar.com       : 48.5
+    - homedepot.com     : 48.1
+    - instructure.com   : 47.7
+    - cnet.com          : 46.3
+    - wix.com           : 44.7
+
 
 Great example domains:
-    - myaccount.google.com
-    - uio.no
+    - taboola.com                   : 92.2
+    - medium.com                    : 90.4
+    - wikipedia.org                 : 88.7
+    - duckduckgo.com                : 86.0
+    - researchgate.net              : 85.8
+    - yahoo.com                     : 81.7
+    - dropbox.com                   : 81.4
+    - evernote.com                  : 81.4
+    - facebook.com                  : 81
+    - bestbuy.com                   : 80.4
+    - airbnb.com                    : 80.0
+    - netflix.com                   : 80.0
+    - usatoday.com                  : 80.0
+    - youtube.com                   : 79.9
+    - myaccount.google.com          : 79.9
+    - reddit.com                    : 79.0
+    - uio.no                        : 78
+    - yahoo.com                     : 77.2
+    - twitter.com                   : 73.5
+    - vk.com                        : 71.3
+    - instagram.com                 : 71.1
+    - bing.com                      : 70.9
+
+
+SSL Labs recent:
+- worst:
+    "raftarafta.com"                : -1,
+    "san284.asp.sd.be"              : -1,
+    "creativdzine.com"              : -1,
+    "mobileapp.landbank.com"        : -1,
+    "bionet.brc.hu"                 : -1,
+    "technoringas.lt"               : 49.8,
+    "www.fareandgood.com.au"        : 51.8,
+    "www.bfc.com.ve"                : 52,
+    "bcs.join.swisscom.ch"          : 53.2,
+    "www.finchoice.co.za"           : 61.9
+
+- best:
+    "malta1853.startdedicated.de"   : 49.7,
+    "ofb.gouv.fr"                   : 53.7,
+    "takiweb.takiapp.com.br"        : 58.7,
+    "siskhealthcare.com"            : 60.9,
+    "cgsqc.redcapcloud.com"         : 64.3,
+    "google.co.id"                  : 65.9,
+    "www.capspharmacy.com"          : 67.2,
+    "gdesemena.ru"                  : 71.3,
+    "citrix.apleonahsg.at"          : 76.3,
 
 
 DO THIS:
+#TODO:- CHANGE the text in light status doc
 
     - Write scoring system
         - Reduce percentage of crl and ocsp to increase caa, ct and mostly HSTS
@@ -102,11 +160,18 @@ extended-validation => 2.23.140.1.1 (Certificate issued in compliance with the E
 
 Errors and results found:
 - A correction to certvalidator was made to fix problem of no revocation reason:
-    - certvalidator/validate.py (function: verify_ocsp_response(), line 1127)
+    - certvalidator/validate.py (function: verify_ocsp_response(), line 1104)
     - This will not be available to others cloneing my repo. A new pypi package
       must be distributed by the owner of the certvalidator repository containing
       the fix.
 
+- A correction was made in certvalidator/validate.py where the validation time
+  (moment) in the ocsp-response has nanosecond precision, while the "this_update"
+  field has seconds precision. When compared, the "this_update" would appear to be
+  greater than the validation time because of the extra nanosecond precision.
+  This would fail the path validation with the message: OCSP response is from
+  after the validation time. A second was added to the validation time to remedy 
+  this bug. Inside function verify_ocsp_response(),Line 949 in the current github repository.
 
 Meeting notes 26-02-2020:
 -------------------------
@@ -238,3 +303,23 @@ Project Notes to include in thesis (2 334 lines of code/doc):
         All 'recommended' ciphers are 'secure' ciphers by definition. Recommended means that these ciphers also support
         PFS (Perfect Forward Secrecy) and should be your first choice if you want the highest level of security.
         However, you might run into some compatibility issues with older clients that do not support PFS ciphers.
+
+
+POINT TO MAKE IN THESIS:
+- More focused on the certificate security and directly related mechanisms
+- The problem around usability vs security.
+    - How a perfect score here does not make the site "better"
+- emphasize the importance of communicating the security to the user
+  through explainations and easy consepts.
+- How the gui tries to direct the users attention to the most relevant
+  parts of the analysis. The light and score helps less experienced users
+  to get some understanding around the security
+- Look at the results from the scans and point out how more sensitive and
+  critical services have better scores.
+- How the criticality of the service relates to the score. (not all websites
+  needs strict security. it depends on the usecase)
+- How the tools can be used a user application and as a scanning utility,
+  providing easily accessable scores and insights into the configuration
+  of domains/servers.
+- The score on its own does not mean much, but becomes relevant when you
+  assign scores to many different websites and compare them. 

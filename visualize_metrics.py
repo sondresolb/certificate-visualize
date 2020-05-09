@@ -8,14 +8,14 @@ def evaluate_results(results, proto_cipher_result):
     """Evaluation process
 
     Each element of the scan process is broken down into different categories:
-        - The end-entity certificate                    : 30%
-        - Certificate Revocation List (CRL)             : 8%
-        - Online Certificate Status Protocol (OCSP)     : 8%
-        - Certificate Transparency (CT)                 : 10%
-        - Certificate Authority Authorization (CAA)     : 8%
+        - The end-entity certificate                    : 32%
+        - Certificate Revocation List (CRL)             : 5%
+        - Online Certificate Status Protocol (OCSP)     : 5%
+        - Certificate Transparency (CT)                 : 12%
+        - Certificate Authority Authorization (CAA)     : 10%
         - OCSP-Staple                                   : 2%
-        - HTTPS Strict Transport Security (HSTS)        : 12%
-        - Protocol and cipher support                   : 22%
+        - HTTPS Strict Transport Security (HSTS)        : 14%
+        - Protocol and cipher support                   : 20%
 
     Each category is then broken down into its most important elements where
     each elements is given a score from 0-100. Each elements is also weighted
@@ -30,14 +30,14 @@ def evaluate_results(results, proto_cipher_result):
     If certificate validation has already failed, then the score is also 0.
     """
     weighted_score = {
-        "Certificate":      {"weight": 0.30},
-        "CRL":              {"weight": 0.08},
-        "OCSP":             {"weight": 0.08},
-        "CT":               {"weight": 0.10},
-        "CAA":              {"weight": 0.08},
+        "Certificate":      {"weight": 0.32},
+        "CRL":              {"weight": 0.05},
+        "OCSP":             {"weight": 0.05},
+        "CT":               {"weight": 0.12},
+        "CAA":              {"weight": 0.10},
         "OCSP_staple":      {"weight": 0.02},
-        "HSTS":             {"weight": 0.12},
-        "Proto_ciphers":    {"weight": 0.22}
+        "HSTS":             {"weight": 0.14},
+        "Proto_ciphers":    {"weight": 0.20}
     }
 
     evaluation_result = {}
@@ -125,19 +125,19 @@ def score_end_certificate(results):
             - EdDSA25519            : 80
             - EdDSA448              : 100
 
-    Certificate type
+    Certificate type (end-certificate)
     - Evaluation:
-        - Not indicated             : 50
-        - Domain-validated          : 70
-        - Individual-validated      : 80
-        - Organization-validated    : 80
+        - Not indicated             : 0
+        - Domain-validated          : 50
+        - Individual-validated      : 70
+        - Organization-validated    : 70
         - Extended-validation       : 100
 
     Revocation_support
     - Evaluation:
         - CRL and OCSP              : 100
-        - OCSP                      : 80
-        - CRL                       : 50
+        - OCSP                      : 60
+        - CRL                       : 40
         - None                      : raise
 
     Must-staple
@@ -268,9 +268,9 @@ def evaluate_revocation_support(cert, results):
     if crl_support and ocsp_support:
         return 100
     elif ocsp_support:
-        return 80
+        return 60
     elif crl_support:
-        return 50
+        return 40
     else:
         raise EvaluationFailureError(
             f"No revocation methods found in certificate {cert.subject['commonName']}")
@@ -317,13 +317,13 @@ def evaluate_certificate_type(cert):
     cert_type = cert.certificate_type
 
     if cert_type == "Not indicated":
-        return 50
+        return 0
     elif cert_type == "Domain-validated":
-        return 70
+        return 50
     elif cert_type == "Individual-validated":
-        return 80
+        return 70
     elif cert_type == "Organization-validated":
-        return 80
+        return 70
     elif cert_type == "Extended-validation":
         return 100
 
@@ -406,18 +406,18 @@ def score_crl(results):
     The largest publication interval for a crl in 1 week
         - source: https://tools.ietf.org/html/rfc5280#page-14
 
-    Number of endpoints (more than one)
+    Reliability (Number of endpoints)
     - Evaluation:
         - one endpoint                          : 50
         - two or more                           : 100
 
-    Signature hash
+    Signature hash (inside endpoint)
     - Evaluation:
         - md2, md5:                             : 0
         - SHA1                                  : 50
         - SHA2, SHA3 etc.                       : 100
 
-    Update iterval (next_update - last_update)
+    Update iterval (next_update - last_update)(inside endpoint)
     - Evaluation:
         - Less or equal to 1 week               : 100
         - More than 1 week                      : 0
@@ -624,19 +624,27 @@ def score_ct(results):
     """Evaluate Certificate Transparency
 
     If Certificate Transparency is not supported, it will receive a score
-    of 0. If there are two or more good logs, a score of 100 will be assigned
-    for better reliability. If a log is retired, then the SCT timestamp must
+    of 0. If a log is retired, then the SCT timestamp must
     be less than the log timestamp (SCT issued before log retired).
+    Google chrome requires a one year certificate to include SCT-proof
+    from two independent logs. A two year certificate must include proof
+    from 3 independent logs. This score does not consider the timespan
+    of the certificate. More logs improves the overall reliability when
+    auditing certificates in CT-logs and limits impact in the case that a
+    CA would be hacked or go rogue.
+    https://www.digicert.com/certificate-transparency/status-background.htm
 
     usable/readonly/retired logs
     - Evaluation:
         - No usable/readonly/retired logs       : 0
-        - 1 usable/readonly/retired log         : 75
-        - 2 or more usable/readonly/retired logs: 100
+        - 1 usable/readonly/retired log         : 25
+        - 2 usable/readonly/retired logs        : 75
+        - 3 or more usable/readonly/retired logs: 100
 
     - Weight
         No weights
     """
+    end_cert = results["validation_path"][1]["end_cert"]
     ct_support, ct_data = results["ct"]
 
     if not ct_support:
@@ -644,12 +652,12 @@ def score_ct(results):
 
     ct_score = {}
 
-    ct_score["sct_logs"], sct_logs_score = evaluate_sct(ct_data)
+    ct_score["sct_logs"], sct_logs_score = evaluate_sct(ct_data, end_cert)
 
     return (ct_score, sct_logs_score)
 
 
-def evaluate_sct(ct_data):
+def evaluate_sct(ct_data, end_cert):
     good_states = ["usable", "readonly", "retired"]
     num_operational = 0
     total_score = 0
@@ -676,13 +684,21 @@ def evaluate_sct(ct_data):
         else:
             sct_score[log] = "SCT is not valid"
 
+    not_before, not_after = end_cert.validity_period
+    cert_age = not_after - not_before
+
+    if cert_age <= timedelta(398):
+        min_logs = 2
+    else:
+        min_logs = 3
+
     if num_operational == 0:
         total_score = 0
 
-    elif num_operational == 1:
-        total_score = 75
+    elif num_operational < min_logs:
+        total_score = 25
 
-    else:
+    elif num_operational >= min_logs:
         total_score = 100
 
     return (sct_score, total_score)
@@ -748,9 +764,9 @@ def score_pc(results, proto_cipher_result):
 
     Supported protocols
     - Evaluation:
-        - TLSv1.0                               : 50
-        - TLSv1.1                               : 60
-        - TLSv1.2                               : 90
+        - TLSv1.0                               : 0
+        - TLSv1.1                               : 30
+        - TLSv1.2                               : 80
         - TLSv1.3                               : 100
 
     Enabled ciphers
@@ -818,9 +834,9 @@ def score_pc(results, proto_cipher_result):
 
 def evaluate_supported_protocols(pc_data):
     protocol_values = {
-        "TLSv1.0": 50,
-        "TLSv1.1": 60,
-        "TLSv1.2": 90,
+        "TLSv1.0": 0,
+        "TLSv1.1": 30,
+        "TLSv1.2": 80,
         "TLSv1.3": 100
     }
 

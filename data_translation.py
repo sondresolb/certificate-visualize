@@ -357,14 +357,15 @@ def set_evaluation_result(evaluation_score, ui):
 
     gui_score = round(evaluation_score, 1)
 
-    if evaluation_score == -1 or 0 <= evaluation_score < 45:
+    if evaluation_score == -1 or 0 <= evaluation_score < 40:
         color_key = "red"
-        gui_score = 0
+        if evaluation_score <= 0:
+            gui_score = 0
 
-    elif 45 <= evaluation_score < 75:
+    elif 40 <= evaluation_score < 70:
         color_key = "yellow"
 
-    elif 75 <= evaluation_score:
+    elif 70 <= evaluation_score:
         color_key = "green"
 
     icon = QtGui.QIcon()
