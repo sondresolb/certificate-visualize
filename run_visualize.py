@@ -216,7 +216,7 @@ def run_stress_test(test_suite="uio.no"):
     domain_scores = {}
     for index, domain in enumerate(domains):
         try:
-            if index > 600:
+            if index > 500:
                 return domain_scores
 
             print(f"\nCURRENT DOMAIN NUM: {index}\n")
@@ -237,6 +237,10 @@ def run_stress_test(test_suite="uio.no"):
 # time out stalled calls to improve testing
 def test_handler(signum, frame):
     raise Exception("test timeout")
+
+
+def sort_decending(data):
+    return {k: v for k, v in sorted(data.items(), key=lambda item: item[1], reverse=True)}
 
 
 if __name__ == "__main__":
