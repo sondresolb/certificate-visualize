@@ -116,7 +116,7 @@
             </font>
            </property>
            <property name="text">
-            <string>Red signifies a score greater or equal to 0 and less than 45 (0 &lt;= x &lt; 45).
+            <string>Red signifies a score greater or equal to 0 and less than 40 (0 &lt;= x &lt; 40).
 It can also indicate a certificate validation and/or evaluation failure as described below. Certificates with this status should not be used to secure a connection, as they are likely faulty in configuration or using deprecated cryptographic functions</string>
            </property>
            <property name="wordWrap">
@@ -164,7 +164,7 @@ It can also indicate a certificate validation and/or evaluation failure as descr
             </font>
            </property>
            <property name="text">
-            <string>Yellow signifies a score greater or equal to 45 and less than 75 (45 &lt;= x &lt; 75).
+            <string>Yellow signifies a score greater or equal to 40 and less than 70 (40 &lt;= x &lt; 70).
 Certificates with this status might be using a weak public key, old or deprecated cryptographic functions and/or only support a small subset of security mechanisms. Depending on where the score falls within the threshold, this might not be sufficiently secure for transfer of credentials or comparable information</string>
            </property>
            <property name="wordWrap">
@@ -212,7 +212,7 @@ Certificates with this status might be using a weak public key, old or deprecate
             </font>
            </property>
            <property name="text">
-            <string>Green signifies a score greater or equal to 75 and less or equal to 100 (75 &lt;= x &lt;=100).
+            <string>Green signifies a score greater or equal to 70 and less or equal to 100 (70 &lt;= x &lt;=100).
 Certificates with this status are showing strong results accross most categories and with decent to good support for security mechanisms. This should provide a sufficiently secure connection for most usecases</string>
            </property>
            <property name="wordWrap">

@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'status_doc.ui'
 #
-# Created by: PyQt5 UI code generator 5.14.1
+# Created by: PyQt5 UI code generator 5.14.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -24,11 +24,9 @@ class Ui_status_doc(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(
-            QtCore.QRect(0, 0, 1085, 1595))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 1085, 1595))
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
-        self.verticalLayout_2 = QtWidgets.QVBoxLayout(
-            self.scrollAreaWidgetContents)
+        self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents)
         self.verticalLayout_2.setSpacing(18)
         self.verticalLayout_2.setObjectName("verticalLayout_2")
         self.label = QtWidgets.QLabel(self.scrollAreaWidgetContents)
@@ -40,24 +38,20 @@ class Ui_status_doc(object):
         font.setUnderline(False)
         font.setWeight(50)
         self.label.setFont(font)
-        self.label.setAlignment(QtCore.Qt.AlignLeading |
-                                QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
+        self.label.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignTop)
         self.label.setIndent(0)
         self.label.setObjectName("label")
         self.verticalLayout_2.addWidget(self.label)
         self.horizontalLayout = QtWidgets.QHBoxLayout()
-        self.horizontalLayout.setSizeConstraint(
-            QtWidgets.QLayout.SetDefaultConstraint)
+        self.horizontalLayout.setSizeConstraint(QtWidgets.QLayout.SetDefaultConstraint)
         self.horizontalLayout.setSpacing(28)
         self.horizontalLayout.setObjectName("horizontalLayout")
         self.label_2 = QtWidgets.QLabel(self.scrollAreaWidgetContents)
         self.label_2.setMaximumSize(QtCore.QSize(80, 80))
         self.label_2.setText("")
-        self.label_2.setPixmap(QtGui.QPixmap(
-            "qt_files/color_lights/red_light.svg"))
+        self.label_2.setPixmap(QtGui.QPixmap("qt_files/color_lights/red_light.svg"))
         self.label_2.setScaledContents(True)
-        self.label_2.setAlignment(
-            QtCore.Qt.AlignLeading | QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+        self.label_2.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
         self.label_2.setObjectName("label_2")
         self.horizontalLayout.addWidget(self.label_2)
         self.label_5 = QtWidgets.QLabel(self.scrollAreaWidgetContents)
@@ -75,8 +69,7 @@ class Ui_status_doc(object):
         self.label_3 = QtWidgets.QLabel(self.scrollAreaWidgetContents)
         self.label_3.setMaximumSize(QtCore.QSize(80, 80))
         self.label_3.setText("")
-        self.label_3.setPixmap(QtGui.QPixmap(
-            "qt_files/color_lights/yellow_light.svg"))
+        self.label_3.setPixmap(QtGui.QPixmap("qt_files/color_lights/yellow_light.svg"))
         self.label_3.setScaledContents(True)
         self.label_3.setObjectName("label_3")
         self.horizontalLayout_2.addWidget(self.label_3)
@@ -95,8 +88,7 @@ class Ui_status_doc(object):
         self.label_4 = QtWidgets.QLabel(self.scrollAreaWidgetContents)
         self.label_4.setMaximumSize(QtCore.QSize(80, 80))
         self.label_4.setText("")
-        self.label_4.setPixmap(QtGui.QPixmap(
-            "qt_files/color_lights/green_light.svg"))
+        self.label_4.setPixmap(QtGui.QPixmap("qt_files/color_lights/green_light.svg"))
         self.label_4.setScaledContents(True)
         self.label_4.setObjectName("label_4")
         self.horizontalLayout_3.addWidget(self.label_4)
@@ -109,8 +101,7 @@ class Ui_status_doc(object):
         self.label_7.setObjectName("label_7")
         self.horizontalLayout_3.addWidget(self.label_7)
         self.verticalLayout_2.addLayout(self.horizontalLayout_3)
-        spacerItem = QtWidgets.QSpacerItem(
-            20, 25, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
+        spacerItem = QtWidgets.QSpacerItem(20, 25, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
         self.verticalLayout_2.addItem(spacerItem)
         self.label_8 = QtWidgets.QLabel(self.scrollAreaWidgetContents)
         self.label_8.setMaximumSize(QtCore.QSize(16777215, 66))
@@ -124,8 +115,7 @@ class Ui_status_doc(object):
         font.setPointSize(14)
         self.label_9.setFont(font)
         self.label_9.setScaledContents(False)
-        self.label_9.setAlignment(
-            QtCore.Qt.AlignLeading | QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
+        self.label_9.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignTop)
         self.label_9.setWordWrap(True)
         self.label_9.setIndent(0)
         self.label_9.setObjectName("label_9")
@@ -154,8 +144,7 @@ class Ui_status_doc(object):
         self.horizontalLayout_4 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_4.setContentsMargins(-1, -1, -1, 0)
         self.horizontalLayout_4.setObjectName("horizontalLayout_4")
-        spacerItem1 = QtWidgets.QSpacerItem(
-            30, 20, QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Minimum)
+        spacerItem1 = QtWidgets.QSpacerItem(30, 20, QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout_4.addItem(spacerItem1)
         self.verticalLayout_3 = QtWidgets.QVBoxLayout()
         self.verticalLayout_3.setContentsMargins(-1, -1, -1, 0)
@@ -167,12 +156,10 @@ class Ui_status_doc(object):
         self.label_12.setObjectName("label_12")
         self.verticalLayout_3.addWidget(self.label_12)
         self.label_13 = QtWidgets.QLabel(self.scrollAreaWidgetContents)
-        sizePolicy = QtWidgets.QSizePolicy(
-            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(
-            self.label_13.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(self.label_13.sizePolicy().hasHeightForWidth())
         self.label_13.setSizePolicy(sizePolicy)
         font = QtGui.QFont()
         font.setPointSize(14)
@@ -206,8 +193,7 @@ class Ui_status_doc(object):
         self.horizontalLayout_5 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_5.setContentsMargins(-1, -1, -1, 0)
         self.horizontalLayout_5.setObjectName("horizontalLayout_5")
-        spacerItem2 = QtWidgets.QSpacerItem(
-            30, 20, QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Minimum)
+        spacerItem2 = QtWidgets.QSpacerItem(30, 20, QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout_5.addItem(spacerItem2)
         self.verticalLayout_4 = QtWidgets.QVBoxLayout()
         self.verticalLayout_4.setContentsMargins(-1, -1, -1, 0)
@@ -278,38 +264,30 @@ class Ui_status_doc(object):
 
     def retranslateUi(self, status_doc):
         _translate = QtCore.QCoreApplication.translate
-        status_doc.setWindowTitle(_translate(
-            "status_doc", "Status documentation"))
+        status_doc.setWindowTitle(_translate("status_doc", "Status documentation"))
         self.label.setText(_translate("status_doc", "Status light"))
-        self.label_5.setText(_translate("status_doc", "Red signifies a score greater or equal to 0 and less than 45 (0 <= x < 45).\n"
-                                        "It can also indicate a certificate validation and/or evaluation failure as described below. Certificates with this status should not be used to secure a connection, as they are likely faulty in configuration or using deprecated cryptographic functions"))
-        self.label_6.setText(_translate("status_doc", "Yellow signifies a score greater or equal to 45 and less than 75 (45 <= x < 75).\n"
-                                        "Certificates with this status might be using a weak public key, old or deprecated cryptographic functions and/or only support a small subset of security mechanisms. Depending on where the score falls within the threshold, this might not be sufficiently secure for transfer of credentials or comparable information"))
-        self.label_7.setText(_translate("status_doc", "Green signifies a score greater or equal to 75 and less or equal to 100 (75 <= x <=100).\n"
-                                        "Certificates with this status are showing strong results accross most categories and with decent to good support for security mechanisms. This should provide a sufficiently secure connection for most usecases"))
-        self.label_8.setText(_translate(
-            "status_doc", "Evaluation and weights"))
+        self.label_5.setText(_translate("status_doc", "Red signifies a score greater or equal to 0 and less than 40 (0 <= x < 40).\n"
+"It can also indicate a certificate validation and/or evaluation failure as described below. Certificates with this status should not be used to secure a connection, as they are likely faulty in configuration or using deprecated cryptographic functions"))
+        self.label_6.setText(_translate("status_doc", "Yellow signifies a score greater or equal to 40 and less than 70 (40 <= x < 70).\n"
+"Certificates with this status might be using a weak public key, old or deprecated cryptographic functions and/or only support a small subset of security mechanisms. Depending on where the score falls within the threshold, this might not be sufficiently secure for transfer of credentials or comparable information"))
+        self.label_7.setText(_translate("status_doc", "Green signifies a score greater or equal to 70 and less or equal to 100 (70 <= x <=100).\n"
+"Certificates with this status are showing strong results accross most categories and with decent to good support for security mechanisms. This should provide a sufficiently secure connection for most usecases"))
+        self.label_8.setText(_translate("status_doc", "Evaluation and weights"))
         self.label_9.setText(_translate("status_doc", "In the evaluation process, the information gathered from the scan is split into eight categories, namely, Certificate, CRL (Certificate Revocation Lists), OCSP (Online Certificate Status Protocol), CT (Certificate Transparency), CAA (Certificate Authority Authorization), OCSP-Staple, HSTS (HTTP Strict Transport Security) and Protocol-ciphers. Each of these categories are assigned weights which dictate how much they will influence the total score. Depending on the complexity of the category, it might be broken down into sub-categories and assigned weights. Each category contains one or more base-elements (e.g,. The signature hash of the certificate) which are given a weight and a score from 0 to 100. When all base-elements within a category have been assigned a score and multiplied by their respective weight, they are summed up to make up the total score for that category. This process is repeated until we are left with the final score."))
-        self.label_25.setText(_translate(
-            "status_doc", "The \"Evaluation\" entry found in the top right window of the main certificate display contains an evaluation tree, detailing the score given to each category and base-element"))
+        self.label_25.setText(_translate("status_doc", "The \"Evaluation\" entry found in the top right window of the main certificate display contains an evaluation tree, detailing the score given to each category and base-element"))
         self.label_10.setText(_translate("status_doc", "Conditional failures"))
-        self.label_11.setText(_translate(
-            "status_doc", "The certificate is only given a score by passing a set of conditional checks. If a check fails, the score is automatically set to 0. These checks include:"))
+        self.label_11.setText(_translate("status_doc", "The certificate is only given a score by passing a set of conditional checks. If a check fails, the score is automatically set to 0. These checks include:"))
         self.label_12.setText(_translate("status_doc", "-  Validation checks"))
         self.label_13.setText(_translate("status_doc", "The certificate validation process employs the Basic Path Validation algorithm defined in section 6.1 of RFC 5280 (excluding name constraint checks). This includes, but are not limited to certificate path building, revocation, expired end-certificate, hostname missmatch, self-signed end-certificate and signature verification. The certificate chain is validated for use in a TLS connection by checking all key usage parameters and verifying the service identity you are connecting to according to section 6 of RFC 6125"))
         self.label_14.setText(_translate("status_doc", "-  Evaluation checks"))
         self.label_15.setText(_translate("status_doc", "The evaluation will check if the end-certificate have embedded at least one revocation method. This would be either CRL or OCSP. The end-certificate must be version 3 and can not include the CT-poison extension or be signed using md2, md5 or sha1"))
-        self.label_16.setText(_translate(
-            "status_doc", "Ciphersuite security categories"))
+        self.label_16.setText(_translate("status_doc", "Ciphersuite security categories"))
         self.label_17.setText(_translate("status_doc", "-  Insecure"))
-        self.label_18.setText(_translate(
-            "status_doc", "These ciphers are very old and shouldn\'t be used under any circumstances. Their protection can be broken with minimal effort nowadays"))
+        self.label_18.setText(_translate("status_doc", "These ciphers are very old and shouldn\'t be used under any circumstances. Their protection can be broken with minimal effort nowadays"))
         self.label_19.setText(_translate("status_doc", "-  Weak"))
-        self.label_20.setText(_translate(
-            "status_doc", "These ciphers are old and should be disabled if you are setting up a new server for example. Make sure to only enable them if you have a special use case where support for older operating systems, browsers or applications is required"))
+        self.label_20.setText(_translate("status_doc", "These ciphers are old and should be disabled if you are setting up a new server for example. Make sure to only enable them if you have a special use case where support for older operating systems, browsers or applications is required"))
         self.label_21.setText(_translate("status_doc", "-  Secure"))
-        self.label_22.setText(_translate(
-            "status_doc", "Secure ciphers are considered state-of-the-art and if you want to secure your web server you should certainly choose from this set. Only very old operating systems, browsers or applications are unable to handle them"))
+        self.label_22.setText(_translate("status_doc", "Secure ciphers are considered state-of-the-art and if you want to secure your web server you should certainly choose from this set. Only very old operating systems, browsers or applications are unable to handle them"))
         self.label_23.setText(_translate("status_doc", "-  Recommended"))
         self.label_24.setText(_translate("status_doc", "All \'recommended\' ciphers are \'secure\' ciphers by definition. Recommended means that these ciphers also support PFS (Perfect Forward Secrecy) and should be your first choice if you want the highest level of security. However, you might run into some compatibility issues with older clients that do not support PFS ciphers"))
 

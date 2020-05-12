@@ -109,45 +109,45 @@ SSL Labs recent:
 
 
 DO THIS:
-#TODO:- CHANGE the text in light status doc
+    - write thesis...
 
-    - Write scoring system
-        - Reduce percentage of crl and ocsp to increase caa, ct and mostly HSTS
-        - Evaluation variables:
-            - Certificate signature algorithm (weak signature hash (MD2, MD5, SHA1))
-            - TLS version (lowest)
 
-            - Cipher suite (Both evaluated by the security variable):
-                - Key exchange
-                    - authentication algo
-                    - exchange/generation algo
-                - Cipher (lowest)
-                    - security
-                    - encryption algo
-                    - hash algo
 
-            - Public key size (relative to algorithm)
-            - Support for revocation (CRL and OCSP)
-            - CRL details (only valid crls evaluated):
-                - Includes delta crls
-                - signature algo (hash type and size)
-            - OCSP details (only valid ocsps evaluated):
-                - Signature algo (hash type and size)
-                - How old the information is (treshold model)
-            - CT support
-            - DNS CAA support
-            - OCSP staple support
-            - OCSP must-staple support
-            - Certificate type? (dv, ov, ev)
-            - HSTS support
+- Write scoring system (almost.)
+    - Evaluation variables:
+        - Certificate signature algorithm (weak signature hash (MD2, MD5, SHA1))
+        - TLS version (lowest)
 
-        - Complete failure of certificate:
-            - Could not be validated (revoked, hostname missmatch, selfsigned etc.)
-            - Chain was not sorted (served correctly)
-            - Certificate is expired
-            - No revocation information
-            - Includes CTpoison extension
+        - Cipher suite (Both evaluated by the security variable):
+            - Key exchange
+                - authentication algo
+                - exchange/generation algo
+            - Cipher (lowest)
+                - security
+                - encryption algo
+                - hash algo
 
+        - Public key size (relative to algorithm)
+        - Support for revocation (CRL and OCSP)
+        - CRL details (only valid crls evaluated):
+            - Includes delta crls
+            - signature algo (hash type and size)
+        - OCSP details (only valid ocsps evaluated):
+            - Signature algo (hash type and size)
+            - How old the information is (treshold model)
+        - CT support
+        - DNS CAA support
+        - OCSP staple support
+        - OCSP must-staple support
+        - Certificate type? (dv, ov, ev)
+        - HSTS support
+
+    - Complete failure of certificate:
+        - Could not be validated (revoked, hostname missmatch, selfsigned etc.)
+        - Chain was not sorted (served correctly)
+        - Certificate is expired
+        - No revocation information
+        - Includes CTpoison extension
 
 
 CAB/Browser forum policy extension OIDs:
@@ -322,4 +322,8 @@ POINT TO MAKE IN THESIS:
   providing easily accessable scores and insights into the configuration
   of domains/servers.
 - The score on its own does not mean much, but becomes relevant when you
-  assign scores to many different websites and compare them. 
+  assign scores to many different websites and compare them.
+
+
+  taboola.com
+  revoked.badssl.com
