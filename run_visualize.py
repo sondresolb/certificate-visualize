@@ -23,7 +23,7 @@ def signal_wrap(signal, percent, text):
 def certificate_scan(domain, signal):
     signal_wrap(signal, 1, "initializing analysis...")
 
-    vis_tools.set_trust_store()     # Set custom trust store for validation
+    vis_tools.set_trust_store()     # Set custom trust-store
     scan_result = {}
 
     try:
@@ -195,7 +195,7 @@ def run_stress_test(test_suite="uio.no"):
 
     elif test_suite == "top":
         print("\nRunning top million domains")
-        with open("top-1m.json") as json_file:
+        with open("top-1m_tranco.json") as json_file:
             domains_json = json.load(json_file)
             domains = domains_json["endpoints"]
 
@@ -218,6 +218,10 @@ def run_stress_test(test_suite="uio.no"):
         try:
             if index > 500:
                 return domain_scores
+
+            if index != 0 and index % 50 == 0:
+                with open('tranco_scan_result.json', 'w') as fp:
+                    json.dump(sort_decending(domain_scores), fp)
 
             print(f"\nCURRENT DOMAIN NUM: {index}\n")
             # test_sig.alarm(240)
@@ -246,4 +250,4 @@ def sort_decending(data):
 if __name__ == "__main__":
     # keywords: uni, top, rec
     scores = run_stress_test(sys.argv[1])
-    print(f"\n\n{scores}")
+    print(f"\n\n{sort_decending(scores)}")

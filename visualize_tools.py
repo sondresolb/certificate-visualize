@@ -38,10 +38,11 @@ def fetch_certificate_chain(domain, timeout=300):
     """Connect to a server and ask for certificate chain
 
     Takes in a domain which gets idna encoded, connects to the
-    server using SSL v2 or v3 and asks for the certificate chain of
-    the server. The chain is then sorted. If the chain only contains one
-    certificate, it will try to check the AIA extension for a refrence to
-    an intermedia certificate.
+    server using the prefered server protocol and asks for the
+    certificate chain of the server and OCSP-staple. If the chain 
+    only contains one certificate, it will try to check the AIA 
+    extension for a refrence to an intermedia certificate.
+    The certificates are parsed into Cert_repr objects and then sorted.
 
     Args:
         domian (str): The domain you want the certificate chain for
