@@ -188,12 +188,6 @@ class Cert_repr:
                     else:
                         print(f"Failed to parse extension: {ext.oid._name}")
 
-        except x509.DuplicateExtension as dup:
-            print(str(dup))
-        except x509.UnsupportedGeneralNameType as unsupp:
-            print(str(unsupp))
-        except UnicodeError as uni:
-            print(str(uni))
         except Exception as e:
             print(str(e))
 
