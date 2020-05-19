@@ -197,20 +197,21 @@ def validate_certificate_chain(domain, cert_chain, whitelist=None):
         return (True, result)
 
     except cert_errors.PathBuildingError as pbe:
-        ex = "Unable to find the necessary certificates to build the validation path"
-        return (False, ex, str(pbe))
+        ex = (("Unable to find the necessary certificates "
+               "to build the validation path"), str(pbe))
     except cert_errors.RevokedError as re:
-        ex = "The certificate or a certificate in the chain has been revoked"
-        return (False, ex, str(re))
+        ex = (("The certificate or a certificate in the "
+               "chain has been revoked"), str(re))
     except cert_errors.PathValidationError as pve:
-        ex = "An error occured while validating the certificate path"
-        return (False, ex, str(pve))
+        ex = (("An error occured while validating the "
+               "certificate path"), str(pve))
     except cert_errors.InvalidCertificateError as ice:
-        ex = "Certificate is not valid for TLS or the hostname does not match"
-        return (False, ex, str(ice))
+        ex = (("Certificate is not valid for TLS or the "
+               "hostname does not match"), str(ice))
     except Exception as e:
-        ex = f"Unhandled exception raised: {str(e)}"
-        return (False, ex, str(e))
+        ex = ("Unhandled exception raised", str(e))
+
+    return (False, ex[0], ex[1])
 
 
 def signature_verification(key_certs, signature_bytes, tbs_bytes, sig_hash_algo):
