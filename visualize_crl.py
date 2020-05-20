@@ -160,7 +160,8 @@ def is_revoked(crl, serial_number):
                            "revocation_date": result.revocation_date}
 
         try:
-            reason_ext = crl.extensions.get_extension_for_class(x509.CRLReason)
+            reason_ext = result.extensions.get_extension_for_class(
+                x509.CRLReason)
             reason_name = reason_ext.value.reason.name
             revocation_info["reason"] = f"{reason_name}: {get_reason_message(reason_name)}"
 
