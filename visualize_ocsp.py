@@ -193,7 +193,7 @@ def validate_ocsp_response(host, ocsp_response, issuer, cert_serial_number, hc=T
 
     checks_passed = True
 
-    # Check that the certificate in question is the same as in the ocsp response
+    # Check if the certificate in question is the same as in the ocsp response
     validation_result["cert_match"] = {"passed": True}
     if ocsp_response.serial_number != cert_serial_number:
         checks_passed = False
@@ -201,7 +201,7 @@ def validate_ocsp_response(host, ocsp_response, issuer, cert_serial_number, hc=T
         validation_result["cert_match"]["message"] = (
             "Certificate beeing checked does not match certificate in response")
 
-    # Check that the current time is greater than next_update field in the response
+    # Check if the next_update field in response is less than current time
     validation_result["next_update"] = {"passed": True}
     if datetime.datetime.now() > ocsp_response.next_update:
         checks_passed = False
@@ -209,7 +209,7 @@ def validate_ocsp_response(host, ocsp_response, issuer, cert_serial_number, hc=T
         validation_result["next_update"]["message"] = (
             "OCSP next_update is earlier than local system time")
 
-    # Check that the current time is less than this_update field in the response
+    # Check if the this_update field in response is greater than current time
     validation_result["this_update"] = {"passed": True}
     if datetime.datetime.now() < ocsp_response.this_update:
         checks_passed = False
