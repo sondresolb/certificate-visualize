@@ -1,27 +1,39 @@
 import dns.resolver
-from dns.resolver import NoAnswer
 import tld
+from tld.exceptions import TldBadUrl, TldDomainNotFound
 
 
-def check_caa(domain, end_cert):
+def check_caa(domain):
     """Certificate Authority Authorization
 
     If a top level domain has a registered dns caa record,
-    then all subdomain will inherit this unless specified.
+    then all subdomain will inherit this unless specified
+    for the subdomain.
     """
-    original_domain = domain.replace("www.", "")
+    strip_domain = domain.replace("www.", "")
 
-    od_res = caa_lookup(original_domain)
-    if od_res[0]:
-        return od_res
+    try:
+        tld_obj = tld.get_tld(
+            strip_domain, as_object=True, fix_protocol=True)
+        fld_str = tld_obj.fld
+        subdomain_str = tld_obj.subdomain
 
-    else:
-        # Testing top level domain if original domain fails
-        try:
-            top_level_domain = tld.get_fld(domain, fix_protocol=True)
-            return caa_lookup(top_level_domain)
-        except tld.exceptions.TldDomainNotFound:
-            return (False, None)
+    except (TldBadUrl, TldDomainNotFound) as tld_err:
+        print(f"\nCAA failure: {str(tld_err)}")
+        return (False, None)
+
+    # Testing subdomain hierarchy
+    if subdomain_str:
+        subdomain_lst = subdomain_str.split(".")
+        for _ in range(len(subdomain_lst)):
+            subdomain = f"{'.'.join(subdomain_lst)}.{fld_str}"
+            subdomain_lst.pop(0)
+            sub_res = caa_lookup(subdomain)
+            if sub_res[0]:
+                return sub_res
+
+    # Testing top level domain
+    return caa_lookup(fld_str)
 
 
 def caa_lookup(domain):
@@ -38,5 +50,5 @@ def caa_lookup(domain):
 
         return (True, caa_records)
 
-    except NoAnswer:
+    except Exception:
         return (False, None)

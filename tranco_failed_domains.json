@@ -1,0 +1,39 @@
+{
+    "windowsupdate.com": "Is only a redirect",
+    "amazonaws.com": "Top domain of CDN. Only subdomains hosted. Does not accept HTTP/S requests",
+    "microsoftonline.com": "Only subdomains hosted. Does not accept HTTP/S requests",
+    "googleusercontent.com": "No address associated with hostname",
+    "www.godaddy.com": {
+        "score": 58.6,
+        "public_key": "RSA 2048 bit",
+        "cert_type": "Organization-validated",
+        "crl": true,
+        "ocsp": true,
+        "must_staple": false,
+        "ct": 3,
+        "caa": false,
+        "staple": true,
+        "hsts": false,
+        "protocols": "Min: TLSv1.0, Max: TLSv1.2",
+        "ciphers": "Min: weak, Max: recommended"
+    },
+    "xinhuanet.com": "No certificates to supply",
+    "www.alipay.com": {
+        "score": 56.9,
+        "public_key": "RSA 2048 bit",
+        "cert_type": "Organization-validated",
+        "crl": true,
+        "ocsp": true,
+        "must_staple": false,
+        "ct": 2,
+        "caa": false,
+        "staple": false,
+        "hsts": false,
+        "protocols": "Min: TLSv1.0, Max: TLSv1.2",
+        "ciphers": "Min: weak, Max: recommended"
+    },
+    "ytimg.com": "Youtube image host. Only subdomains. Does not accept http requests",
+    "macromedia.com": "Not activly hosted domain. Only redirect to adobe.com",
+    "nflxso.net": "Netflix CDN domain. Does not support HTTP requests",
+    "wixsite.com": "Not registred domain. www.wixsite.com redirects to www.wix.com"
+}

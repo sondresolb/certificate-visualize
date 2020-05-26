@@ -110,7 +110,7 @@ def certificate_scan(domain, signal):
 
     signal_wrap(signal, 46, "querying for CAA record")
     # *CAA*
-    caa_support, caa_result = vis_caa.check_caa(domain, end_cert)
+    caa_support, caa_result = vis_caa.check_caa(domain)
     scan_result["caa"] = (caa_support, caa_result)
     print(f"\nDNS CAA support: {caa_support}\n{caa_result}")
 
@@ -153,7 +153,7 @@ def certificate_scan(domain, signal):
         list(proto_cipher_result.keys()))
 
     # Indicator if certificate is revoked
-    scan_result["cert_revoked"] = crl_revoked and ocsp_revoked
+    scan_result["cert_revoked"] = crl_revoked or ocsp_revoked
 
     # All keyusages
     try:
@@ -180,62 +180,101 @@ def certificate_scan(domain, signal):
     return scan_result
 
 
-def run_stress_test(test_suite="uio.no"):
+def run_stress_test(in_data, out_file):
     import json
     import signal as test_sig
     from urllib.parse import urlsplit
     domains = []
 
-    if test_suite == "uni":
+    if in_data == "uni":
         print("\nRunning university domains")
         with open("uni_domains.json") as json_file:
             uni_json = json.load(json_file)
             for item in uni_json:
                 domains.extend([urlsplit(i).netloc for i in item["web_pages"]])
 
-    elif test_suite == "top":
+    elif in_data == "top":
         print("\nRunning top million domains")
         with open("top-1m_tranco.json") as json_file:
             domains_json = json.load(json_file)
             domains = domains_json["endpoints"]
 
-    elif test_suite == "rec":
-        print("\nRunning most recognized domains")
-        with open("most_rec_domains.json") as json_file:
-            domains_json = json.load(json_file)
-            domains = domains_json["domains"]
-
-    elif type(test_suite) is list:
-        domains = test_suite
+    elif type(in_data) is list:
+        domains = in_data
 
     else:
-        domains.append(test_suite)
+        domains.append(in_data)
 
     # test_sig.signal(test_sig.SIGALRM, test_handler)
 
     domain_scores = {}
     for index, domain in enumerate(domains):
+        if index > 250:
+            return domain_scores
+
+        print(f"\nCURRENT DOMAIN NUM: {index}\n")
+        # test_sig.alarm(240)
+
         try:
-            if index > 500:
-                return domain_scores
-
-            if index != 0 and index % 50 == 0:
-                with open('tranco_scan_result.json', 'w') as fp:
-                    json.dump(sort_decending(domain_scores), fp)
-
-            print(f"\nCURRENT DOMAIN NUM: {index}\n")
-            # test_sig.alarm(240)
             res = certificate_scan(domain, None)
 
             if not res["proto_cipher"][0]:
                 raise Exception("Cipher scan failed")
             else:
-                domain_scores[domain] = round(res["evaluation_result"][1], 1)
+                domain_scores[domain] = extract_table_data(res)
 
         except Exception as e:
             domain_scores[domain] = f"Failure: {str(e)}"
 
+        if out_file:
+            print(f"\nWriting to: {out_file}")
+            with open(out_file, 'w') as fp:
+                json.dump(domain_scores, fp)
+
     return domain_scores
+
+
+def extract_table_data(result):
+    import visualize_ciphers as vis_ciphers
+
+    if not result["validation_path"][0]:
+        raise Exception(result["validation_path"][2]["details"])
+    elif result["evaluation_result"][1] == -1:
+        raise Exception(result["evaluation_result"][0])
+
+    data = {}
+    data["score"] = round(result["evaluation_result"][1], 1)
+    cert = result["validation_path"][1]["end_cert"]
+    public_key = cert.public_key
+    data["public_key"] = f"{public_key['type']} {public_key['size']} bit"
+    data["cert_type"] = cert.certificate_type
+    data["crl"] = result["crl"][0]
+    data["ocsp"] = result["ocsp"][0]
+    data["must_staple"] = cert.must_staple
+    good_logs = 0
+    if result["ct"][0]:
+        for log in result["evaluation_result"][0]["CT"]["sct_logs"].values():
+            if log == "Good":
+                good_logs += 1
+        data["ct"] = good_logs
+    else:
+        data["ct"] = False
+    data["caa"] = result["caa"][0]
+    data["staple"] = result["staple"][0]
+    data["hsts"] = result["hsts"]
+
+    pc_data = result["evaluation_result"][0]["Proto_ciphers"]
+    protocol = list(pc_data["protocol_support"].keys())
+    cipher = list(pc_data["ciphersuite_support"].keys())
+    cipher_min = cipher[0].split(" ")[1]
+    cipher_max = cipher[1].split(" ")[1]
+    cipher_info = vis_ciphers.get_cipher_suite_info()
+    min_security = vis_ciphers.evaluate_cipher(cipher_min, cipher_info)
+    max_security = vis_ciphers.evaluate_cipher(cipher_max, cipher_info)
+
+    data["protocols"] = f"{protocol[0]}, {protocol[1]}"
+    data["ciphers"] = f"Min: {min_security['security']}, Max: {max_security['security']}"
+    return data
 
 
 # time out stalled calls to improve testing
@@ -248,6 +287,28 @@ def sort_decending(data):
 
 
 if __name__ == "__main__":
-    # keywords: uni, top, rec
-    scores = run_stress_test(sys.argv[1])
-    print(f"\n\n{sort_decending(scores)}")
+    import argparse
+    text = 'Scan a domain or list of domains and get a summary outputted to JSON'
+
+    parser = argparse.ArgumentParser(description=text)
+    parser.add_argument("--domain", "-d", help="Domain to scan")
+    parser.add_argument(
+        "--top", help="List of Tranco top 1 million domains", action="store_true")
+    parser.add_argument(
+        "--uni", help="List of US university domains", action="store_true")
+    parser.add_argument(
+        "--file", "-f", help="Output file: <file_name>.json", default=None)
+    args = parser.parse_args()
+
+    if args.domain:
+        in_data = args.domain
+    elif args.top:
+        in_data = "top"
+    elif args.uni:
+        in_data = "uni"
+    else:
+        parser.print_help()
+        sys.exit()
+
+    scores = run_stress_test(in_data, args.file)
+    print(f"\n\n{scores}")
