@@ -9,7 +9,7 @@ Instructions for cloning and using application
 ### Prerequisites
 
 ```
-Python 3, OpenSSL 1.1.1, pip, pipenv, bash
+Python 3, OpenSSL 1.1.1, pip, pipenv, cURL, grep
 ```
 
 ### Installing
