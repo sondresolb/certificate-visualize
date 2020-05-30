@@ -170,7 +170,8 @@ def validate_certificate_chain(domain, cert_chain, whitelist=None):
     """Validates the certificate path given a certificate chain
 
     Validates the certificate path, checks that the certificate is valid for the
-    hostname provided and that the certificate is valid for the purpose of a TLS connection
+    hostname provided and that the certificate is valid for the purpose of a TLS
+    connection.
 
     Args:
         domain (str): The host address
@@ -187,10 +188,12 @@ def validate_certificate_chain(domain, cert_chain, whitelist=None):
             serialization.Encoding.DER) for cert in cert_chain]
 
         valid_context = ValidationContext(
-            trust_roots=TRUST_STORE, whitelisted_certs=whitelist, allow_fetching=True)
+            trust_roots=TRUST_STORE, whitelisted_certs=whitelist,
+            allow_fetching=True, revocation_mode="hard-fail")
 
         cert_validator = CertificateValidator(
-            end_entity_cert=der_certs[0], intermediate_certs=der_certs[1:], validation_context=valid_context)
+            end_entity_cert=der_certs[0], intermediate_certs=der_certs[1:],
+            validation_context=valid_context)
 
         result = cert_validator.validate_tls(domain)
 
