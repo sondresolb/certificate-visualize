@@ -40,6 +40,12 @@ Run the GUI application
 python main_visualize.py
 ```
 
+Run command-line application
+
+```
+python run_visualize.py --domain <example.com> --file <file>
+```
+
 ## Built With
 
 * [pyca/cryptography](https://cryptography.io/en/latest/) - Cryptographic functions and primitives
