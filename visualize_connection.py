@@ -107,11 +107,12 @@ def get_supported_proto_ciphers(domain, ip, progress_signal):
             proto_cipher_support[info["protocol"]] = {}
 
     try:
+        cipher_info = vis_ciphers.get_cipher_suite_info()
+
         # TLSv1.3 cipher-suites not included in openssl list
         missing_ciphers = ["TLS_AES_128_CCM_SHA256",
                            "TLS_AES_128_CCM_8_SHA256"]
 
-        cipher_info = vis_ciphers.get_cipher_suite_info()
         cipher_list = subprocess.run(
             ["openssl", "ciphers", "ALL:eNULL"], capture_output=True, text=True)
 
@@ -122,16 +123,17 @@ def get_supported_proto_ciphers(domain, ip, progress_signal):
         signal, c_progress = progress_signal
         progress_left = (100 - c_progress) - 1
         progress_add = progress_left / len(supported_protocols)
+
         for p_protocol, o_protocol in supported_protocols.items():
             c_progress += progress_add
             signal_wrap(signal, c_progress,
                         f"testing {p_protocol} cipher support")
 
-            cipher_flag = "-ciphersuites" if p_protocol == "TLSv1.3" else "-cipher"
+            cipher_flag = (
+                "-ciphersuites" if p_protocol == "TLSv1.3" else "-cipher")
 
             for cipher in all_ciphers:
                 try:
-
                     call = (
                         f"openssl s_client -connect {str_ip}:443 {cipher_flag} {cipher} "
                         f"-{o_protocol} < /dev/null > /dev/null 2>&1")
