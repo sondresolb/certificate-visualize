@@ -15,7 +15,7 @@ def evaluate_results(results, proto_cipher_result):
         - Certificate Authority Authorization (CAA)     : 10%
         - OCSP-Staple                                   : 2%
         - HTTPS Strict Transport Security (HSTS)        : 14%
-        - Protocol and cipher support                   : 20%
+        - Protocols and ciphers support                 : 20%
 
     Each category is then broken down into its most important elements where
     each elements is given a score from 0-100. Each elements is also weighted
@@ -122,7 +122,7 @@ def score_end_certificate(results):
             - 384 <= x              : 100
 
         - EdDSA
-            - EdDSA25519            : 80
+            - EdDSA25519            : 85
             - EdDSA448              : 100
 
     Certificate type (end-certificate)
@@ -146,7 +146,8 @@ def score_end_certificate(results):
         - false                     : 0
 
     Evaluation failure (raise error)
-    - Use of (md2, md5, sha1)
+    - Use of (md2, md5, sha1) by end or intermediate cert
+    - Certificate not V3
     - No revocation information
     - Includes CTpoison extension
     - Certificate is expired
@@ -393,7 +394,7 @@ def evaluate_public_key(cert):
 
     # Around 128 bit security level
     elif key_type == "EdDSA25519":
-        return 80
+        return 85
 
     # Around 224 bit security level
     elif key_type == "EdDSA448":
@@ -537,9 +538,7 @@ def score_ocsp(results):
         - SHA2, SHA3 etc.                       : 100
 
     Weights
-    - Response status                           : raise
-    - Verification result                       : raise
-    - Signature hash                            : 100%
+    - No weights
     """
 
     ocsp_support, _, ocsp_data = results["ocsp"]

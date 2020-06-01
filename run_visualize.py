@@ -209,7 +209,7 @@ def run_stress_test(in_data, out_file):
 
     domain_scores = {}
     for index, domain in enumerate(domains):
-        if index > 250:
+        if index > 110:
             return domain_scores
 
         print(f"\nCURRENT DOMAIN NUM: {index}\n")
@@ -229,7 +229,7 @@ def run_stress_test(in_data, out_file):
         if out_file:
             print(f"\nWriting to: {out_file}")
             with open(out_file, 'w') as fp:
-                json.dump(domain_scores, fp)
+                json.dumps(domain_scores, fp)
 
     return domain_scores
 
@@ -258,7 +258,7 @@ def extract_table_data(result):
                 good_logs += 1
         data["ct"] = good_logs
     else:
-        data["ct"] = False
+        data["ct"] = 0
     data["caa"] = result["caa"][0]
     data["staple"] = result["staple"][0]
     data["hsts"] = result["hsts"]
@@ -271,9 +271,10 @@ def extract_table_data(result):
     cipher_info = vis_ciphers.get_cipher_suite_info()
     min_security = vis_ciphers.evaluate_cipher(cipher_min, cipher_info)
     max_security = vis_ciphers.evaluate_cipher(cipher_max, cipher_info)
-
-    data["protocols"] = f"{protocol[0]}, {protocol[1]}"
-    data["ciphers"] = f"Min: {min_security['security']}, Max: {max_security['security']}"
+    data["min_protocol"] = protocol[0]
+    data["max_protocol"] = protocol[1]
+    data["min_cipher"] = min_security['security']
+    data["max_cipher"] = max_security['security']
     return data
 
 
