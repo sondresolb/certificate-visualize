@@ -229,7 +229,7 @@ def run_stress_test(in_data, out_file):
         if out_file:
             print(f"\nWriting to: {out_file}")
             with open(out_file, 'w') as fp:
-                json.dumps(domain_scores, fp)
+                json.dump(domain_scores, fp)
 
     return domain_scores
 
@@ -271,8 +271,8 @@ def extract_table_data(result):
     cipher_info = vis_ciphers.get_cipher_suite_info()
     min_security = vis_ciphers.evaluate_cipher(cipher_min, cipher_info)
     max_security = vis_ciphers.evaluate_cipher(cipher_max, cipher_info)
-    data["min_protocol"] = protocol[0]
-    data["max_protocol"] = protocol[1]
+    data["min_protocol"] = protocol[0].split(" ")[1]
+    data["max_protocol"] = protocol[1].split(" ")[1]
     data["min_cipher"] = min_security['security']
     data["max_cipher"] = max_security['security']
     return data
