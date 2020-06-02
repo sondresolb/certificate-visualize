@@ -404,7 +404,7 @@ def evaluate_public_key(cert):
 def score_crl(results):
     """Evaluate CRL results from end-entity certificate
 
-    The largest publication interval for a crl in 1 week
+    The largest publication interval for a crl is 1 week
         - source: https://tools.ietf.org/html/rfc5280#page-14
 
     Reliability (Number of endpoints)
