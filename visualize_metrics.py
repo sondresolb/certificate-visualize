@@ -627,18 +627,16 @@ def score_ct(results):
     be less than the log timestamp (SCT issued before log retired).
     Google chrome requires a one year certificate to include SCT-proof
     from two independent logs. A two year certificate must include proof
-    from 3 independent logs. This score does not consider the timespan
-    of the certificate. More logs improves the overall reliability when
+    from 3 independent logs. More logs improves the overall reliability when
     auditing certificates in CT-logs and limits impact in the case that a
     CA would be hacked or go rogue.
     https://www.digicert.com/certificate-transparency/status-background.htm
 
     usable/readonly/retired logs
     - Evaluation:
-        - No usable/readonly/retired logs       : 0
-        - 1 usable/readonly/retired log         : 25
-        - 2 usable/readonly/retired logs        : 75
-        - 3 or more usable/readonly/retired logs: 100
+        - No usable/readonly/retired logs           : 0
+        - Less than minimum number of logs          : 25
+        - More or equal to minimum number of logs   : 100
 
     - Weight
         No weights
